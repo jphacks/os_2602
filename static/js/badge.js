@@ -162,6 +162,84 @@
     return canvas;
   }
 
+  /**
+   * 砂の板：今の音に合わせて、砂が動き続けるクラドニ図形（調査画面のゲージの中に置く）
+   * 大きさは CSS で決める（キャンバスの画素数は表示された大きさに合わせる）。色は要素の文字色
+   *   const p = DetherBadge.plate();
+   *   wellEl.prepend(p.el);
+   *   p.start();                    // 動かす（測定中だけ）
+   *   p.setSpectrum(spectrum);      // 音の形が変わるたびに呼ぶ（measure.js の level の spectrum）
+   *   p.stop();                     // 止める（一時停止中など。砂はそのまま残る）
+   * @param {Object} [opt]
+   * @param {number} [opt.count=1400]  砂粒の数（多いと重い）
+   * @param {number} [opt.dot=1.3]     砂粒の大きさ(px)
+   */
+  function plate(opt) {
+    const o = opt || {};
+    const count = o.count || 1400;
+    const dot = o.dot || 1.3;
+    const canvas = document.createElement("canvas");
+    canvas.className = "sand-plate";
+    canvas.setAttribute("aria-hidden", "true");
+
+    const points = [];
+    for (let k = 0; k < count; k++) { // はじめは円の中に均一にまく
+      const r = Math.sqrt(Math.random()), t = Math.random() * 2 * Math.PI;
+      points.push([r * Math.cos(t), r * Math.sin(t)]);
+    }
+
+    const reduceMotion = global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let f = null;
+    let running = false;
+    let raf = 0;
+    let lastStill = 0;
+
+    const paint = () => {
+      const dpr = Math.min(global.devicePixelRatio || 1, 2);
+      const side = Math.round(canvas.clientWidth * dpr);
+      if (!side) return; // 画面に出ていない
+      if (canvas.width !== side) canvas.width = canvas.height = side;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, side, side);
+      ctx.fillStyle = getComputedStyle(canvas).color;
+      const s = dot * dpr;
+      for (const p of points) ctx.fillRect(((p[0] + 1) / 2) * side - s / 2, ((p[1] + 1) / 2) * side - s / 2, s, s);
+    };
+
+    const frame = () => {
+      raf = 0;
+      if (!running) return;
+      if (f) settle(points, f, Math.random);
+      paint();
+      raf = global.requestAnimationFrame(frame);
+    };
+
+    return {
+      el: canvas,
+      setSpectrum(spectrum) {
+        if (!spectrum || spectrum.length < 3) return; // 取れなかったときは前の模様のまま
+        f = chladniField(spectrum, 1);
+        // 動きを減らす設定の端末では、砂を動かして見せずに、1秒に1回まとめて模様を描き直す
+        if (reduceMotion && running && Date.now() - lastStill > 1000) {
+          lastStill = Date.now();
+          for (let i = 0; i < 15; i++) settle(points, f, Math.random);
+          paint();
+        }
+      },
+      start() {
+        if (running) return;
+        running = true;
+        if (reduceMotion) paint();
+        else raf = global.requestAnimationFrame(frame);
+      },
+      stop() {
+        running = false;
+        if (raf) global.cancelAnimationFrame(raf);
+        raf = 0;
+      },
+    };
+  }
+
   /** レアかどうか（band は "d" = 昼 / "n" = 夜） */
   function isRare(code, band) {
     return !!RARE[code + band];
@@ -297,5 +375,5 @@
     throw new Error(`DetherBadge: 未知の category "${bt.category}"`);
   }
 
-  global.DetherBadge = { CODES, MARK, NAMES, RARE, BAND, isRare, medal, pin, setPinSelected, row, codeFromBadgeType, specimen };
+  global.DetherBadge = { CODES, MARK, NAMES, RARE, BAND, isRare, medal, pin, setPinSelected, row, codeFromBadgeType, specimen, plate };
 })(window);

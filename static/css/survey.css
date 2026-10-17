@@ -263,8 +263,22 @@
   transition: stroke-dashoffset 0.1s linear;
 }
 
+/* 砂の板（survey_page.js が badge.js の plate で作る）。輪の内側いっぱいに、数字の後ろに敷く */
+.gauge__well .sand-plate {
+  position: absolute;
+  inset: 8%;
+  width: 84%;
+  height: 84%;
+  border-radius: 50%;
+  color: var(--d-muted); /* 砂の色 */
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .gauge__center {
   position: relative;
+  /* 砂の上でも数字が読めるよう、地の色でふちどる */
+  text-shadow: 0 0 3px var(--d-bg), 0 0 6px var(--d-bg), 0 0 10px var(--d-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
