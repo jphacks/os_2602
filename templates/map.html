@@ -1,30 +1,138 @@
 {% extends "base.html" %}
+{% comment %}
+  map.html = マップ（リーダーのモックの形）。
+
+  上から順に：
+    ローカル（自分）／全国（みんな）の切り替え
+    時間帯の絞り込み（最初は「今」の時間帯。main/views.py の map_view() が選んでおく）
+    地図（ヒートマップ・タグのアイコン・バッジのピン）。右下の「タグ」「バッジ」で表示を切り替える
+    色の見方（マスごとの平均dB）
+    ピンを押すと出るシート（その場所のバッジと投稿。重なってまとめたピンなら全部）
+
+  地図そのものの処理は static/js/map.js（DetherMap）。画面の操作は static/js/map_page.js。
+  ★Google Maps の APIキーとマップIDは .env の GOOGLE_MAPS_API_KEY / GOOGLE_MAP_ID。
+    キーが無いときは /map/?mock=1 で、APIの代わりにダミーのデータで見た目を確認できる（地図は出ない）。
+{% endcomment %}
 {% load static %}
 
-{% block title %}マップ | dether{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'css/map.css' %}" />
+{% endblock %}
 
 {% block content %}
-  <link rel="stylesheet" href="{% static 'css/map.css' %}">
-  <style>
-    /* ヘッダー分を引いた高さ。ヘッダーの高さが違う場合は 120px を調整する */
-    .map-wrap { position: relative; height: calc(100dvh - 120px); min-height: 360px; }
-  </style>
+<div class="map-page">
+  <div class="scope-tabs" role="tablist" aria-label="地図の切り替え">
+    <button class="scope-tabs__tab" type="button" role="tab" aria-selected="false" data-scope="mine">ローカル（自分）</button>
+    <button class="scope-tabs__tab" type="button" role="tab" aria-selected="true" data-scope="everyone">全国（みんな）</button>
+  </div>
 
-  <div class="map-wrap">
+  <label class="map-band">
+    <span class="map-band__label">時間帯</span>
+    <span class="map-band__select">
+      <select id="map-band">
+        <option value="">すべての時間帯</option>
+        {% for band in bands %}
+        <option value="{{ band.id }}" {% if band.id == current_band_id %}selected{% endif %}>
+          {{ band.name }}（{{ band.start_time|time:"G:i" }}〜{{ band.end_time|time:"G:i" }}）
+        </option>
+        {% endfor %}
+      </select>
+    </span>
+  </label>
+
+  <div class="map-card">
     <div
       id="map"
       class="dether-map"
       data-api-key="{{ GOOGLE_MAPS_API_KEY }}"
       data-map-id="{{ GOOGLE_MAP_ID }}"
       data-badges-url="/api/badges/mine/"
+      data-everyone-url="/api/badges/everyone/"
+      data-heatmap-url="/api/heatmap"
     ></div>
-    <button id="recenter" class="map-recenter" type="button">現在地へ</button>
-    <div id="badge-sheet" class="badge-sheet" hidden></div>
+
+    <button id="recenter" class="map-recenter" type="button" aria-label="現在地へ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+      </svg>
+    </button>
+
+    <div class="map-layers">
+      <button class="map-layers__btn" type="button" aria-pressed="true" data-layer="tags">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12V4h8l10 10-8 8z" />
+          <circle cx="7.5" cy="8.5" r="1.5" />
+        </svg>
+        タグ
+      </button>
+      <button class="map-layers__btn" type="button" aria-pressed="true" data-layer="badges">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+        バッジ
+      </button>
+    </div>
+
+    <p id="map-empty" class="map-empty" hidden></p>
   </div>
+
+  <section class="d-card heat-legend" aria-labelledby="heat-legend-title">
+    <div class="heat-legend__head">
+      <h2 id="heat-legend-title" class="heat-legend__title">みんなの測定・マスごとの平均</h2>
+      <span class="heat-legend__unit num">dB</span>
+    </div>
+    <ol class="heat-legend__scale">
+      <li style="--c: var(--heat-1)"><span class="num">〜40</span>しずか</li>
+      <li style="--c: var(--heat-2)"><span class="num">40</span>おだやか</li>
+      <li style="--c: var(--heat-3)"><span class="num">50</span>ふつう</li>
+      <li style="--c: var(--heat-4)"><span class="num">60</span>にぎやか</li>
+      <li style="--c: var(--heat-5)"><span class="num">70</span>うるさい</li>
+      <li style="--c: var(--heat-6)"><span class="num">80</span>かなり</li>
+      <li style="--c: var(--heat-7)"><span class="num">90〜</span>耳に注意</li>
+    </ol>
+  </section>
+</div>
+
+{% comment %}
+  ===== ピンを押すと出るシート =====
+  中身は map_page.js の openSheet() が作る。✕・背景・Esc で閉じる。
+{% endcomment %}
+<div id="spot-sheet" class="spot-sheet" hidden>
+  <div class="spot-sheet__sheet" role="dialog" aria-modal="true" aria-labelledby="spot-sheet-title">
+    <div class="spot-sheet__head">
+      <h2 id="spot-sheet-title" class="spot-sheet__title">この場所の記録</h2>
+      <span id="spot-sheet-count" class="spot-sheet__count num"></span>
+      <button id="spot-sheet-close" class="spot-sheet__close" type="button" aria-label="閉じる">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </button>
+    </div>
+    <ul id="spot-sheet-list" class="spot-list"></ul>
+  </div>
+</div>
+
+{# シートの1件分のひな形（map_page.js が data-slot に中身を入れる） #}
+<template id="spot-item">
+  <li class="spot-item">
+    <div class="spot-item__top">
+      <span data-slot="medal"></span>
+      <div class="spot-item__head">
+        <p class="spot-item__name"><span data-slot="name"></span><span data-slot="chips"></span></p>
+        <p class="spot-item__meta num" data-slot="meta"></p>
+      </div>
+      <span class="spot-item__db num"><span data-slot="db"></span><small>dB</small></span>
+    </div>
+    <ul class="spot-item__tags" data-slot="tags"></ul>
+    <p class="spot-item__text" data-slot="text"></p>
+    <img class="spot-item__photo" data-slot="photo" alt="投稿の写真" loading="lazy" />
+  </li>
+</template>
 {% endblock %}
 
 {% block scripts %}
-  {{ block.super }}
-  <script src="{% static 'js/map.js' %}"></script>
-  <script src="{% static 'js/map_page.js' %}"></script>
+<script src="{% static 'js/map.js' %}"></script>
+<script src="{% static 'js/map_page.js' %}"></script>
 {% endblock %}

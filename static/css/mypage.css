@@ -186,23 +186,7 @@
   font-weight: 700;
 }
 
-/* 時間帯とレアの小さなラベル */
-.chip {
-  padding: 0 7px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--ink2);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.6;
-}
-.chip--rare {
-  border-color: var(--ink);
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--bg);
-  font-weight: 700;
-}
+/* 時間帯とレアの小さなラベル（.chip）は app.css。マップのシートでも使う */
 
 /* 個数の棒グラフ（一番多いものが100%） */
 .badge-list__bar {

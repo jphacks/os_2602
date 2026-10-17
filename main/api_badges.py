@@ -5,14 +5,18 @@
 #
 #   見えている範囲にある、自分のバッジのうち「地図に表示する」ものを返す。
 #   50mルールで隠れたバッジ（show_on_map=False）は返さない（企画書：ローカルマップは50mルール適用後）。
+#   ★ただし投稿したバッジは、隠れていても返す（投稿が地図から消えないように）。
+#   返す形は全国マップ（api_posts.everyone_badges）と同じ。投稿とタグも付ける（api_posts.post_badge_dict）。
 #
 # ▼ 受け取る側は static/js/map.js（DetherMap._fetchBadges）。形はそこに合わせている
 # =============================================================================
 
+from django.db.models import Q
 from django.views.decorators.http import require_http_methods
 
 from main.api import json_response
-from main.models import BadgeType, UserBadge
+from main.api_posts import post_badge_dict, with_post_data
+from main.models import UserBadge
 
 MAX_BADGES = 500  # 1回に返す上限（画面が重くならないように）
 
@@ -33,38 +37,20 @@ def my_badges(request):
     except ValueError as e:
         return json_response({"error": str(e)}, status=400)
 
-    badges = (
+    badges = with_post_data(
         UserBadge.objects.filter(
+            Q(show_on_map=True) | Q(post__isnull=False),
             user=request.user,
-            show_on_map=True,
             measurement__latitude__range=(south, north),
             measurement__longitude__range=(west, east),
-        )
-        .select_related("badge_type", "time_band", "measurement")
-        .order_by("-acquired_at")
+        ).order_by("-acquired_at")
     )
     if time_band is not None:
         badges = badges.filter(time_band_id=time_band)
 
-    return json_response({"badges": [_badge_dict(ub) for ub in badges[:MAX_BADGES]]})
-
-
-def _badge_dict(ub: UserBadge) -> dict:
-    bt = ub.badge_type
-    m = ub.measurement
-    return {
-        "id": ub.id,
-        "lat": float(m.latitude),
-        "lng": float(m.longitude),
-        "name": bt.name,
-        "code": bt.code,  # b90 / b80 / b70 / q40 / q35（badge.js の部品にそのまま渡せる）
-        "system": "loud" if bt.category == BadgeType.Category.LOUD else "quiet",
-        "threshold_db": float(bt.threshold_db),
-        "time_band": ub.time_band_id,  # TimeBand.id
-        "time_band_name": ub.time_band.name,  # 夜のピンの枠色に使う（map.css）
-        "avg_db": float(m.avg_db),
-        "measured_at": m.measured_at.isoformat(),
-    }
+    return json_response(
+        {"badges": [post_badge_dict(ub, request.user) for ub in badges[:MAX_BADGES]]}
+    )
 
 
 def _float(params, key: str, lo: float, hi: float) -> float:

@@ -104,15 +104,12 @@
       </button>
     </header>
 
-    <div class="container">
-      {% if messages %}
-      <ul class="flash-list">
-        {% for message in messages %}
-        <li class="flash flash-{{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-    </div>
+    {# お知らせ。画面の上に重ねて出す。JS からも main.js の showMessage() でここに足す（なので空でも置いておく） #}
+    <ul class="flash-list" aria-live="polite">
+      {% for message in messages %}
+      <li class="flash flash-{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
 
     <main class="container">{% block content %}{% endblock %}</main>
 
