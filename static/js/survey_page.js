@@ -250,28 +250,26 @@
     if (newBadge) $("session-badge").replaceChildren(Badge.medal(newBadge, "list", { spectrum: result.spectrum }));
   }
 
-  // 「最近の記録」の先頭に1行足す（タグは後から付けるので、ここではバッジ名か「タグなし」）
+  // 「最近の記録」の先頭に1行足す（タグは後から付けるので、ここではバッジ名）
+  // バッジの無い記録は「タグなし」になるので足さない（main/views.py の index() と同じ）
   function addRecent(result, badge, timeBand) {
+    if (!badge) return null;
     const row = $("recent-row").content.firstElementChild.cloneNode(true);
     const slot = (name) => row.querySelector(`[data-slot="${name}"]`);
     const at = result.endedAt;
     slot("db").textContent = fmt1(result.avgDb);
-    slot("title").textContent = badge ? NAMES[badge] : "タグなし";
+    slot("title").textContent = NAMES[badge];
     slot("meta").textContent =
       `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, "0")}:` +
       `${String(at.getMinutes()).padStart(2, "0")}` + (timeBand ? `・${timeBand.name}` : "");
-    if (badge) {
-      slot("badge").replaceWith(recentMedal({
-        badge,
-        avgDb: result.avgDb,
-        maxDb: result.maxDb,
-        at: slot("meta").textContent.split("・")[0],
-        timeBand,
-        spectrum: result.spectrum,
-      }));
-    } else {
-      slot("badge").remove();
-    }
+    slot("badge").replaceWith(recentMedal({
+      badge,
+      avgDb: result.avgDb,
+      maxDb: result.maxDb,
+      at: slot("meta").textContent.split("・")[0],
+      timeBand,
+      spectrum: result.spectrum,
+    }));
 
     const list = $("recent-list");
     list.prepend(row);
