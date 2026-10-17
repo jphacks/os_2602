@@ -37,14 +37,17 @@
   /* ---------- 音の標本（クラドニ図形） ----------
      振動する板に砂をまくと、揺れない線（節）に砂が集まって模様ができる（クラドニ図形）。
      その場の音の形（16の帯の強さ）から板の揺れ方を決め、砂粒を節へ集めて描く。
-       ・帯ごとに振動の型（n, m）を割り当てる。低音は大きな模様、高音は細かい模様（本物の板と同じ）
-       ・強かった上位3つの帯の型を、強さに応じて重ね合わせる → 場所ごとに違う模様になる
+       ・街の音はどこでも低音ほど強いので、その傾きを差し引いてから「この場所らしい音」を見る
+       ・音の形の特徴から、振動の型（縦と横の波の数）を連続的に決める → 音が少し違えば模様も少し違う
+           重心（高めか低めか）→ 波の数。高い音ほど細かい模様（本物の板と同じ）
+           広がり（いろいろな高さが混ざっているか）→ 縦と横の波の数の差
+           低音と高音の比 → 2つの向きの重ね方
+           一番目立つ帯 → 2つ目の模様を重ねる（目立つほど強く）
        ・同じ音の形なら、いつ描いても同じ模様（砂のまき方を音の形から決めている）
-     色はメダルの文字色を使うので、明るい面でも暗い面でも見える。 */
-  const CHLADNI_MODES = [
-    [1, 2], [1, 3], [2, 3], [1, 4], [2, 4], [3, 4], [1, 5], [2, 5],
-    [3, 5], [4, 5], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [3, 7],
-  ];
+     色はメダルの文字色を使うので、明るい面でも暗い面でも見える。
+     ★前の決め方（帯ごとに決まった16の型から上位3つを重ねる）は tools/archive/ に控えがある */
+  const SPECTRUM_RANGE_DB = 40; // 音の形の 0〜1 が何dBぶんか（measure.js の spectrumRangeDb と同じ）
+  const TILT_DB_PER_BAND = 1.2; // 差し引く低音の偏り（帯1つ上がるごとに何dB弱いのが普通か）
   const MEDAL_PX = { popup: 120, list: 48, pin: 44, md: 34, sm: 32, xs: 28, xxs: 26 };
   const SPECIMEN_RATE = 0.56; // 模様を描く円の直径（メダルに対する割合。badge.css の .medal__specimen と同じ）
   // サイズごとの [砂粒の数, 砂粒の大きさ(px)]
@@ -61,23 +64,39 @@
       view は板のどこまでを見せるか（VIEW）。1 より小さいと中央を拡大する */
   function chladniField(spectrum, view) {
     const z = view || 1;
-    const top = spectrum
-      .map((v, i) => [Number(v) || 0, i])
-      .sort((a, b) => b[0] - a[0])
-      .slice(0, 3)
-      .filter((b) => b[0] > 0.05);
-    const modes = top.map(([v, i]) => {
-      const [n, m] = CHLADNI_MODES[i % CHLADNI_MODES.length];
-      // 帯ごとに重ね方の向き（＋／−）を変える。全部「−」だと、どの音でも対角線に同じ×が出てしまうため
-      return { n: n * Math.PI * z, m: m * Math.PI * z, a: v * v, sign: i % 2 === 0 ? -1 : 1 };
+    const last = spectrum.length - 1;
+
+    // 1. 低音の偏りを差し引いて、帯ごとの強さの割合 p にする（0 の帯＝聞こえなかった帯は数えない）
+    const w = spectrum.map((v, b) => {
+      v = Number(v) || 0;
+      return v > 0 ? Math.pow(10, ((v - 1) * SPECTRUM_RANGE_DB + TILT_DB_PER_BAND * b) / 10) : 0;
     });
-    if (!modes.length) modes.push({ n: Math.PI * z, m: 2 * Math.PI * z, a: 1, sign: -1 });
+    const total = w.reduce((a, v) => a + v, 0) || 1;
+    const p = w.map((v) => v / total);
+
+    // 2. 音の形の特徴
+    let centroid = 0; // 重心 0（低い）〜1（高い）
+    p.forEach((v, b) => { centroid += v * (b / last); });
+    let spread = 0; // 広がり 0（1つの高さだけ）〜1（いろいろ混ざる）
+    p.forEach((v, b) => { spread += v * Math.pow(b / last - centroid, 2); });
+    spread = Math.min(1, Math.sqrt(spread) / 0.3);
+    let tilt = 0; // 高音の割合 − 低音の割合（-1〜1）
+    p.forEach((v, b) => { tilt += b < spectrum.length / 2 ? -v : v; });
+    let peak = 0; // 一番目立つ帯
+    p.forEach((v, b) => { if (v > p[peak]) peak = b; });
+
+    // 3. 特徴 → 振動の型
+    const n = 1 + centroid * 2.5;
+    const m = n + 1 + spread * 2;
+    const k = Math.max(-1, Math.min(1, tilt * 1.5)); // 2つの向きの重ね方
+    const n2 = 1 + (peak / last) * 2.5;
+    const m2 = n2 + 1;
+    const a2 = 0.8 * p[peak]; // 目立つ帯が強いほど、2つ目の模様が濃く出る
+    const P = Math.PI * z;
+    const mode = (a, b, x, y, s) => Math.cos(a * P * x) * Math.cos(b * P * y) + s * Math.cos(b * P * x) * Math.cos(a * P * y);
+
     return function (x, y) {
-      let f = 0;
-      for (const d of modes) {
-        f += d.a * (Math.cos(d.n * x) * Math.cos(d.m * y) + d.sign * Math.cos(d.m * x) * Math.cos(d.n * y));
-      }
-      return f;
+      return mode(n, m, x, y, k) + a2 * mode(n2, m2, x, y, -k);
     };
   }
 
