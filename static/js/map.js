@@ -104,6 +104,25 @@
     });
   }
 
+  // 前回の現在地を覚えておき、次に開いたときの最初の中心にする（この端末の中だけ。サーバーには送らない）
+  // localStorage はプライベートモードなどで使えないことがあるので、失敗したら覚えないだけ
+  const CENTER_KEY = 'dether-map-center';
+  function loadCenter() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CENTER_KEY));
+      return c && Number.isFinite(c.lat) && Number.isFinite(c.lng) ? { lat: c.lat, lng: c.lng } : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function saveCenter(p) {
+    try {
+      localStorage.setItem(CENTER_KEY, JSON.stringify({ lat: p.lat, lng: p.lng }));
+    } catch (e) {
+      // 覚えられなくても動く
+    }
+  }
+
   function geoErrorMessage(err) {
     if (err && err.code === 1) return '位置情報の許可がオフです。設定から許可してください';
     if (err && err.code === 2) return '現在地を取得できませんでした';
@@ -273,17 +292,9 @@
       return this;
     }
 
-    // 1. 現在地を取得（失敗したら既定の中心で続行）
-    let center = DEFAULT_CENTER;
-    try {
-      const pos = await getCurrentPosition();
-      this.lastPosition = this._toPosition(pos);
-      center = { lat: this.lastPosition.lat, lng: this.lastPosition.lng };
-    } catch (err) {
-      this._emit('position-error', { message: geoErrorMessage(err), fallback: DEFAULT_CENTER });
-    }
-
-    // 2. 地図を表示
+    // 1. 地図をすぐ表示する。中心は前回の現在地（無ければ既定の中心）
+    // ★現在地を待ってから表示すると、屋内などでGPSが決まるまで（最大10秒）真っ白になるため
+    const center = loadCenter() || DEFAULT_CENTER;
     this.map = new google.maps.Map(this.container, {
       center: center,
       zoom: DEFAULT_ZOOM,
@@ -296,13 +307,27 @@
       colorScheme: document.documentElement.dataset.theme === 'dark' ? 'DARK' : 'LIGHT',
     });
 
-    if (this.lastPosition) this._updateMe(this.lastPosition);
-
     // 地図の移動が止まるたびに、表示範囲のバッジを取り直す
     this.map.addListener('idle', this._scheduleFetch.bind(this));
+    // 現在地が取れる前に自分で地図を動かしたら、取れても中心を動かさない
+    let userMoved = false;
+    this.map.addListener('dragstart', function () { userMoved = true; });
 
     this._emit('map-ready', { center: center });
-    if (this.lastPosition) this._emit('position', this.lastPosition);
+
+    // 2. 現在地は地図を出した後に取る。取れたらそこへ移す（失敗したら今の中心のまま）
+    const self = this;
+    getCurrentPosition()
+      .then(function (pos) {
+        self.lastPosition = self._toPosition(pos);
+        self._updateMe(self.lastPosition);
+        if (!userMoved) self.map.setCenter({ lat: self.lastPosition.lat, lng: self.lastPosition.lng });
+        saveCenter(self.lastPosition);
+        self._emit('position', self.lastPosition);
+      })
+      .catch(function (err) {
+        self._emit('position-error', { message: geoErrorMessage(err), fallback: center });
+      });
 
     this._startWatch();
     return this;
@@ -324,6 +349,7 @@
       function (pos) {
         self.lastPosition = self._toPosition(pos);
         self._updateMe(self.lastPosition);
+        saveCenter(self.lastPosition);
         self._emit('position', self.lastPosition);
       },
       function (err) {
