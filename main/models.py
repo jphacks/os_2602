@@ -149,6 +149,8 @@ class Measurement(models.Model):
     avg_db = models.DecimalField("平均dB", max_digits=5, decimal_places=2)
     max_db = models.DecimalField("最大dB", max_digits=5, decimal_places=2)
     duration_seconds = models.PositiveSmallIntegerField("測定秒数")
+    # 音の形（0〜1 が16個。低音→高音）。バッジの「音の標本」の模様を後から描くため。古い記録は空
+    spectrum = models.JSONField("音の形", null=True, blank=True)
     time_band = models.ForeignKey(
         TimeBand,
         on_delete=models.PROTECT,  # 時間帯を消しても測定記録は消えない

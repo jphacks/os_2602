@@ -135,7 +135,7 @@
     const slot = (name) => item.querySelector(`[data-slot="${name}"]`);
     const band = b.time_band_code || null;
 
-    slot('medal').replaceWith(Badge.medal(b.code, 'list', { band }));
+    slot('medal').replaceWith(Badge.medal(b.code, 'list', { band, spectrum: b.spectrum }));
     slot('name').textContent = b.name;
     const chips = slot('chips');
     if (b.time_band_name) chips.append(chip(b.time_band_name));

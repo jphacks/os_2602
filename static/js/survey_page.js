@@ -79,6 +79,14 @@
   let popupBadge = null;
   let popupRow = null;
 
+  // サーバーが描いた「最近の記録」のメダルを、音の形の模様つきで作り直す（音の形は index.html の data-spectrum）
+  document.querySelectorAll("#recent-list [data-spectrum]").forEach((row) => {
+    const old = row.querySelector(".medal");
+    if (!old) return;
+    const spectrum = row.dataset.spectrum.split(",").map(Number);
+    old.replaceWith(Badge.medal(row.dataset.badge, "md", { band: row.dataset.band || undefined, spectrum }));
+  });
+
   /* ---------- ボタン（★survey の操作は必ずボタンの処理の中で呼ぶ。iPhoneの決まり） ---------- */
   $("survey-start").addEventListener("click", () => {
     resetLive();

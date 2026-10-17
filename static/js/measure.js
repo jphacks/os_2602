@@ -541,6 +541,7 @@
         longitude: pos.longitude,
         gps_accuracy: pos.accuracy,
         measured_at: isoLocal(result.endedAt),
+        spectrum: result.spectrum, // 音の形。後からバッジの模様を描くために保存する
       };
 
       let response;
