@@ -66,7 +66,7 @@
     "avg_db": 83.1,
     "max_db": 90.2,
     "duration_seconds": 10.0,
-    "time_band": { "id": 1, "name": "昼" }
+    "time_band": { "id": 1, "name": "昼", "code": "d" }
   },
   "badge": {
     "code": "b80",
@@ -81,9 +81,9 @@
 - `badge` はバッジが出なければ `null`
 - `badge.code` は `b90` / `b80` / `b70` / `q40` / `q35`（バッジ部品のコードと同じ）
 - `badge.replaced` は50mルールで地図から外れた自分のバッジのコード。無ければ `null`（獲得ポップアップの「この場所の70dBバッジを上書きしました」に使う）
-- `time_band` はDBに合わせて `TimeBand.id` で表す（地図の `time_band` も同じ id）。`name` は表示用。レアの判定（昼の静寂・夜の90dB）は `name` で行う
+- `time_band` はDBに合わせて `TimeBand.id` で表す（地図の `time_band` も同じ id）。`name` は表示用。`code` は `TimeBand.code` の `d`（昼）/ `n`（夜）で、レアの判定（badge.js）に使う
 - 見えないアカウントをこのリクエストで作ったときだけ `csrf_token` が付く（measure.js が次の送信に使う）
-- `badge.code` は BadgeType から作る（大きい音は `b` ＋しきい値、静寂は `q` ＋しきい値）
+- `badge.code` は `BadgeType.code`（b90 / b80 / b70 / q40 / q35）
 - 管理画面に TimeBand / BadgeType がまだ無い間は、企画書の値で判定だけして返す（`badge.user_badge_id` は `null`。測った時刻がどの時間帯にも入らないと `time_band.id` も `null` になり、バッジは保存されない）
 
 ### エラー

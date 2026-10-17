@@ -28,12 +28,14 @@ from main.models import BadgeType, Measurement, TimeBand, UserBadge
 if TYPE_CHECKING:
     from main.api_measure import MeasurementInput
 
+
 @dataclass(frozen=True)
 class TimeBandInfo:
     """時間帯はDBに合わせて TimeBand.id で表す（地図の time_band と同じ）。name は表示用"""
 
     id: int | None  # TimeBand.id（DBに無い時刻なら None）
     name: str  # "昼" / "夜"
+    code: str  # TimeBand.code の "d"（昼）/ "n"（夜）。画面のバッジ部品がレアの判定に使う
 
 
 @dataclass(frozen=True)
@@ -65,27 +67,22 @@ DEFAULT_RULES = [
 ]
 
 
-def badge_code(badge_type: BadgeType) -> str:
-    """BadgeType → 画面で使うコード。大きい音は b + しきい値、静寂は q + しきい値（例 b90, q35）"""
-    prefix = "b" if badge_type.category == BadgeType.Category.LOUD else "q"
-    return f"{prefix}{int(badge_type.threshold_db)}"
-
-
 def get_time_band(measured_at: datetime) -> TimeBandInfo:
     """測った時刻の時間帯（TimeBand から引く。日またぎは TimeBand.contains が扱う）"""
     band = TimeBand.for_datetime(measured_at)
     if band is not None:
-        return TimeBandInfo(id=band.id, name=band.name)
-    # DBに時間帯が無い間の仮（保存はされない）
-    hour = timezone.localtime(measured_at).hour
-    return TimeBandInfo(id=None, name="昼" if 6 <= hour < 22 else "夜")
+        return TimeBandInfo(id=band.id, name=band.name, code=band.code)
+    # DBに時間帯が無い間の仮（保存はされない）。TimeBand.code と同じ決まり（昼 6:00〜22:00）
+    if 6 <= timezone.localtime(measured_at).hour < 22:
+        return TimeBandInfo(id=None, name="昼", code="d")
+    return TimeBandInfo(id=None, name="夜", code="n")
 
 
 def get_badge_rules() -> list[BadgeRule]:
     """バッジの判定ルール（強い順）。BadgeType が無ければ企画書の値"""
     rules = [
         BadgeRule(
-            code=badge_code(bt),
+            code=bt.code,
             name=bt.name,
             series="loud" if bt.category == BadgeType.Category.LOUD else "quiet",
             threshold_db=float(bt.threshold_db),
@@ -155,5 +152,5 @@ def save_badge(
             UserBadge.objects.filter(pk__in=visible_before, show_on_map=False).select_related("badge_type")
         )
         if hidden:
-            replaced = badge_code(max(hidden, key=lambda b: b.badge_type.strength).badge_type)
+            replaced = max(hidden, key=lambda b: b.badge_type.strength).badge_type.code
     return SavedBadge(user_badge_id=user_badge.id, replaced=replaced)
