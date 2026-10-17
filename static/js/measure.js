@@ -50,6 +50,7 @@
      round        { result }           区間が終わって送る（result.judge が "loud"/"quiet" なら判定つき）
      recorded     { result, response, badge, already, timeBand }   記録した。新しいバッジではない
      badge        { result, response, badge, name, replaced, timeBand }  新しいバッジ！ 一時停止中
+                    timeBand = { id, name }（id は TimeBand.id。地図の time_band と同じ）
      error        { code, message }    code: insecure / mic-denied / mic-missing / mic-failed /
                                              location-denied / no-location / send-failed / rate-limited / mic-silent
 
@@ -640,7 +641,7 @@
         avg_db: res.avgDb,
         max_db: res.maxDb,
         duration_seconds: res.durationSeconds,
-        time_band: { id: null, name: day ? "昼" : "夜", code: day ? "d" : "n" },
+        time_band: { id: null, name: day ? "昼" : "夜" },
       },
       badge: code ? { code, name: NAMES[code], user_badge_id: null, replaced: null } : null,
       saved: false,

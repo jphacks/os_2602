@@ -60,7 +60,7 @@
 .badge-pin[data-system='quiet'] {
   background: var(--dether-quiet);
 }
-.badge-pin[data-band='night'] {
+.badge-pin[data-band-name='夜'] {
   border-color: var(--dether-pin-night-ring);
 }
 

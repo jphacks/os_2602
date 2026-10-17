@@ -208,7 +208,7 @@ def handle_measurement(user, m: MeasurementInput) -> dict:
             "avg_db": m.avg_db,
             "max_db": m.max_db,
             "duration_seconds": m.duration_seconds,
-            "time_band": {"id": band.id, "name": band.name, "code": band.code},
+            "time_band": {"id": band.id, "name": band.name},
         },
         "badge": (
             {
