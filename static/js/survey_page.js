@@ -71,6 +71,9 @@
   let lastElapsed = 0;
   let lastMode = "normal";
   let tick = 0;
+  // 終わった区間の数。「◯回目」に使う。★送れたかどうかに関係なく、区間が終わるたびに増やす
+  // （survey.sessionCount は送るのに成功した数。位置が取れない・通信の失敗では増えない）
+  let roundsDone = 0;
   let warningTimer = null;
 
   /* ---------- ボタン（★survey の操作は必ずボタンの処理の中で呼ぶ。iPhoneの決まり） ---------- */
@@ -124,7 +127,7 @@
     const progress = Math.min(1, Math.max(0, d.elapsed / d.target));
     $("gauge-bar").style.strokeDashoffset = String(100 * (1 - progress));
     $("live-progress").textContent =
-      `${survey.sessionCount + 1}回目・${d.elapsed.toFixed(1)} / ${d.target} 秒`;
+      `${roundsDone + 1}回目・${d.elapsed.toFixed(1)} / ${d.target} 秒`;
     $("live-avg").textContent = fmt1(d.segmentLeq);
     $("live-max").textContent = fmt1(segMax);
 
@@ -136,6 +139,11 @@
 
     tick += 1;
     if (tick % BAR_EVERY === 0) pushBar(now);
+  });
+
+  // 区間が終わった（判定つきでも通常でも）。送る前に必ず届く
+  survey.on("round", () => {
+    roundsDone += 1;
   });
 
   survey.on("warning", (e) => {
@@ -169,6 +177,7 @@
     lastElapsed = 0;
     lastMode = "normal";
     tick = 0;
+    roundsDone = 0;
     bars.forEach((bar) => {
       bar.style.height = "8%";
       delete bar.dataset.tone;

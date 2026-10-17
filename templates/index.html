@@ -165,8 +165,11 @@
   </li>
 </template>
 
-{# ===== バッジ獲得のポップアップ（リーダーの badge-preview.html と同じ構成） =====
-   表示中は measure.js が測定を一時停止している。✕・背景・Esc で閉じると調査を再開する。 #}
+{% comment %}
+  ===== バッジ獲得のポップアップ（リーダーの badge-preview.html と同じ構成） =====
+  表示中は measure.js が測定を一時停止している。✕・背景・Esc で閉じると調査を再開する。
+  ★{# #} は1行のコメント専用。2行以上にまたがると画面にそのまま出てしまうので {% comment %} を使う。
+{% endcomment %}
 <div id="badge-popup" class="badge-popup" hidden>
   <div class="badge-popup__sheet" role="dialog" aria-modal="true" aria-labelledby="badge-popup-title">
     <div class="badge-popup__top">
