@@ -17,7 +17,7 @@
 
 from django.urls import path
 
-from main import api_badges, api_heatmap, api_measure, views
+from main import api_badges, api_heatmap, api_measure, api_posts, views
 
 # このアプリのURLにまとめて名札を付ける("main:health" のように呼ぶ)。
 app_name = "main"
@@ -40,4 +40,6 @@ urlpatterns = [
     path("api/measurements", api_measure.create_measurement, name="api_create_measurement"),
     path("api/heatmap", api_heatmap.heatmap, name="api_heatmap"),
     path("api/badges/mine/", api_badges.my_badges, name="api_my_badges"),
+    path("api/badges/everyone/", api_posts.everyone_badges, name="api_everyone_badges"),
+    path("api/posts", api_posts.create_post, name="api_create_post"),
 ]

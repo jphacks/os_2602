@@ -21,6 +21,7 @@ from collections import Counter
 
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from main.models import MeasurementTag, Tag, TimeBand, UserBadge
 
@@ -42,7 +43,25 @@ def index(request):
             "tags", "badges__badge_type"
         )[:RECENT_COUNT]
         recent = [_recent_row(m) for m in measurements]
-    return render(request, "index.html", {"title": "調査", "recent": recent})
+
+    # 投稿シートのタグ（今選べるものだけ）。季節タグは別の枠に出す
+    tags = Tag.available()
+    common = [t for t in tags if t.tag_type == Tag.TagType.COMMON]
+    seasonal = [t for t in tags if t.tag_type == Tag.TagType.SEASONAL]
+    periods = {t.period_label for t in seasonal}
+    return render(
+        request,
+        "index.html",
+        {
+            "title": "調査",
+            "recent": recent,
+            "post_tags": common,
+            "post_seasonal": seasonal,
+            # 季節タグの枠の見出しの横に出す言葉（例：9月〜11月の今だけ）
+            # 季節タグの期間がばらばらなら「今だけ」だけにする
+            "post_seasonal_note": f"{periods.pop()}の今だけ" if len(periods) == 1 else "今だけ",
+        },
+    )
 
 
 def _recent_row(measurement):
@@ -124,4 +143,19 @@ def health(request):
 
 
 def map_view(request):
-    return render(request, "map.html")
+    """マップ。ローカル（自分）／全国（みんな）を切り替え、時間帯で絞り込む。
+
+    地図の処理は static/js/map.js、画面の操作は static/js/map_page.js。
+    """
+    bands = list(TimeBand.objects.filter(is_active=True))
+    now_band = TimeBand.for_datetime(timezone.now())
+    return render(
+        request,
+        "map.html",
+        {
+            "title": "マップ",
+            "bands": bands,
+            # 最初に選んでおく時間帯は「今」の時間帯
+            "current_band_id": now_band.id if now_band else None,
+        },
+    )

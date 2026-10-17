@@ -210,10 +210,95 @@
       </div>
     </dl>
 
-    {# 投稿ポップアップ（2日目）ができるまでは隠しておく。survey_page.js の POST_READY で出す #}
+    {# 投稿できるバッジ（サーバーに保存できたもの）のときだけ survey_page.js が出す #}
     <button id="badge-popup-post" class="badge-popup__primary" type="button" hidden>音の内容を投稿する</button>
     <p class="badge-popup__hint">右上の✕で閉じると、そのまま調査を続けます</p>
   </div>
+</div>
+
+{% comment %}
+  ===== 投稿シート（獲得ポップアップの「音の内容を投稿する」から開く） =====
+  表示中も測定は一時停止のまま。「投稿して調査を再開」で送って再開、「戻る」で獲得ポップアップに戻る。
+  タグは main/views.py の index() が「今選べるもの」だけを渡している。送る処理は survey_page.js の submitPost()。
+{% endcomment %}
+<div id="post-sheet" class="badge-popup post-sheet" hidden>
+  <form id="post-form" class="post-sheet__sheet" role="dialog" aria-modal="true" aria-labelledby="post-title" novalidate>
+    <header class="post-sheet__head">
+      <span id="post-medal" class="post-sheet__medal"></span>
+      <span class="post-sheet__heading">
+        <h2 id="post-title" class="post-sheet__title">音の内容を投稿</h2>
+        <span id="post-sub" class="post-sheet__sub num"></span>
+      </span>
+      <span class="badge-popup__paused">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+          <path d="M8 5v14M16 5v14" />
+        </svg>
+        一時停止中
+      </span>
+    </header>
+
+    <div class="post-sheet__body">
+      <fieldset class="post-field">
+        <legend class="post-field__label">
+          何の音でしたか？<span class="post-field__required">必須</span>
+          <span class="post-field__aside">複数選択可</span>
+        </legend>
+        {% if post_tags %}
+        <div class="tag-chips">
+          {% for tag in post_tags %}
+          <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}">
+            <span class="tag-chip__icon" aria-hidden="true">{{ tag.icon|default:tag.name|slice:":1" }}</span>{{ tag.name }}
+          </button>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="post-field__empty">タグがまだ登録されていません（管理画面の「タグ」から追加できます）</p>
+        {% endif %}
+
+        {% if post_seasonal %}
+        <div class="post-season">
+          <p class="post-season__label">季節タグ<span>{{ post_seasonal_note }}</span></p>
+          <div class="tag-chips">
+            {% for tag in post_seasonal %}
+            <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}">
+              <span class="tag-chip__icon" aria-hidden="true">{{ tag.icon|default:tag.name|slice:":1" }}</span>{{ tag.name }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </fieldset>
+
+      <label class="post-field">
+        <span class="post-field__label">内容<small>（任意）</small></span>
+        <textarea id="post-description" class="post-textarea" name="description" rows="3" maxlength="200"
+          placeholder="例：高架の下で、電車が通るたびに会話が聞こえなくなる"></textarea>
+      </label>
+
+      <div class="post-field">
+        <span class="post-field__label">写真<small>（任意）</small></span>
+        <input id="post-photo" class="post-photo__input" type="file" accept="image/jpeg,image/png,image/webp" />
+        <label for="post-photo" id="post-photo-pick" class="post-photo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+          写真を選ぶ
+        </label>
+        <div id="post-photo-preview" class="post-photo__preview" hidden>
+          <img id="post-photo-img" alt="選んだ写真" />
+          <button id="post-photo-remove" class="post-photo__remove" type="button">写真を外す</button>
+        </div>
+        <p class="post-field__note">人の顔や車のナンバーが写らないようにしてください。位置情報（EXIF）は自動で削除されます。</p>
+      </div>
+    </div>
+
+    <footer class="post-sheet__foot">
+      <p id="post-error" class="post-sheet__error" role="alert" hidden></p>
+      <button id="post-submit" class="badge-popup__primary" type="submit" disabled>投稿して調査を再開</button>
+      <button id="post-back" class="post-sheet__back" type="button">戻る</button>
+    </footer>
+  </form>
 </div>
 {% endblock %}
 

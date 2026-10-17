@@ -597,3 +597,294 @@
   color: var(--ink2);
   font-size: 11px;
 }
+
+/* ===========================================================================
+   投稿シート（獲得ポップアップの「音の内容を投稿する」から開く）
+   外側の暗い背景は .badge-popup と同じ。シートは上の見出し・中身（ここだけ動く）・下のボタンの3段
+   =========================================================================== */
+.post-sheet__sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 366px;
+  max-height: calc(100dvh - 24px - env(safe-area-inset-bottom));
+  margin: 0;
+  /* 獲得ポップアップと違って文字が多いので、後ろが透けない色にする */
+  background: var(--d-surface);
+  border: 1px solid var(--d-edge);
+  border-radius: 30px;
+  box-shadow: 0 18px 48px var(--drop);
+  overflow: hidden;
+  animation: sheet-up 0.28s ease-out both;
+}
+
+.post-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 12px;
+}
+.post-sheet__medal {
+  flex: none;
+}
+.post-sheet__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.post-sheet__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.post-sheet__sub {
+  overflow: hidden;
+  color: var(--ink2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.post-sheet__head .badge-popup__paused {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+.post-sheet__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 0;
+  padding: 8px 20px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* --- 各項目 --- */
+.post-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.post-field__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+/* legend は flex にならないブラウザがあるので、下の余白を自分で付ける */
+legend.post-field__label {
+  margin-bottom: 10px;
+}
+.post-field__label small {
+  color: var(--ink2);
+  font-size: 12px;
+  font-weight: 500;
+}
+.post-field__required {
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: rgba(196, 110, 80, 0.16);
+  color: #b0573a;
+  font-size: 11px;
+  font-weight: 700;
+}
+[data-theme="dark"] .post-field__required {
+  background: rgba(232, 150, 120, 0.16);
+  color: #f0a58a;
+}
+.post-field__aside {
+  margin-left: auto;
+  color: var(--ink2);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.post-field__note,
+.post-field__empty {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* --- タグのボタン（選ぶとふくらんだ明るい色になる） --- */
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 5px 16px 5px 5px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--d-surface);
+  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
+  color: var(--d-text);
+  font: 700 13.5px var(--d-font);
+  cursor: pointer;
+}
+.tag-chip__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  font-size: 13px;
+}
+.tag-chip[aria-pressed="true"] {
+  background: var(--d-accent-soft);
+  color: var(--d-on-accent-soft);
+}
+.tag-chip[aria-pressed="true"] .tag-chip__icon {
+  background: var(--d-strong);
+  box-shadow: none;
+  color: var(--d-on-strong);
+}
+[data-theme="dark"] .tag-chip[aria-pressed="true"] .tag-chip__icon {
+  background: #243b35;
+  color: #f1e9d2;
+}
+
+/* 季節タグの枠（へこんだ箱） */
+.post-season {
+  margin-top: 14px;
+  padding: 12px 14px 14px;
+  border-radius: 20px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+}
+.post-season__label {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.post-season__label span {
+  margin-left: 8px;
+  color: var(--ink2);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* --- 内容 --- */
+.post-textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  color: var(--d-text);
+  font: 500 14px/1.6 var(--d-font);
+  resize: vertical;
+}
+.post-textarea::placeholder {
+  color: var(--ink3);
+}
+.post-textarea:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
+
+/* --- 写真 --- */
+/* ファイル選択の部品そのものは見えなくして、label をボタンの見た目にする */
+.post-photo__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.post-photo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 18px;
+  border-radius: 18px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.post-photo svg {
+  width: 22px;
+  height: 22px;
+}
+.post-photo__input:focus-visible + .post-photo {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
+.post-photo__preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.post-photo__preview img {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: var(--d-raised);
+}
+.post-photo__remove {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--d-text);
+  font: 500 13px var(--d-font);
+  cursor: pointer;
+}
+
+/* --- 下のボタン（動かない） --- */
+.post-sheet__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 20px 14px;
+  border-top: 1px solid var(--line);
+}
+.post-sheet__foot .badge-popup__primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.post-sheet__error {
+  width: 100%;
+  margin: 0 0 6px;
+  color: #b0573a;
+  font-size: 12px;
+  text-align: center;
+}
+[data-theme="dark"] .post-sheet__error {
+  color: #f0a58a;
+}
+.post-sheet__back {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  background: transparent;
+  color: var(--ink2);
+  font: 700 14px var(--d-font);
+  cursor: pointer;
+}
