@@ -17,8 +17,6 @@
 #   書き方の見本は demo/views.py にある。
 # =============================================================================
 
-from collections import Counter
-
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -34,6 +32,24 @@ BADGE_CODES = ["b90", "b80", "b70", "q40", "q35"]
 BADGE_LABELS = {"b90": "90dB", "b80": "80dB", "b70": "70dB", "q40": "静寂", "q35": "深い静寂"}
 # 企画書：昼の静寂・昼の深い静寂・夜の90dBはレア（badge.js の RARE と同じ）
 RARE = {("q40", "d"), ("q35", "d"), ("b90", "n")}
+
+# マイページの図鑑のシートに出す言葉。取ったあとは説明、まだのときは取り方のヒント
+BADGE_TEXT = {
+    "b90": "電車の高架下や工事現場なみの、とても大きな音。長くいると耳を傷めることがあります。",
+    "b80": "大通りの交差点や、にぎやかなお店の中くらいの大きな音。",
+    "b70": "車の通る道ばたや、にぎやかな話し声くらいの音。",
+    "q40": "図書館や、夜の住宅街くらいの静けさ。",
+    "q35": "ささやき声より静かな、とても深い静けさ。なかなか出会えません。",
+}
+BADGE_HINT = {
+    "b90": "90dB以上の音が10秒続く場所で",
+    "b80": "80dB以上の音が10秒続く場所で",
+    "b70": "70dB以上の音が10秒続く場所で",
+    "q40": "40dB以下の静けさが15秒続く場所で",
+    "q35": "35dB以下の静けさが15秒続く場所で",
+}
+# シートに並べる標本の数の上限（新しい順）
+ZUKAN_ITEMS = 60
 
 
 def index(request):
@@ -73,69 +89,165 @@ def _recent_row(measurement):
     """「最近の記録」の1行分。タイトルはタグ → バッジ名の順で決める（どちらも無い記録は index() で除いている）。"""
     badges = list(measurement.badges.all())
     best = max(badges, key=lambda b: b.badge_type.strength).badge_type if badges else None
-    tags = [tag.name for tag in measurement.tags.all()]
+    tags = list(measurement.tags.all())
     return {
         "measurement": measurement,
-        "title": "・".join(tags) or (best.name if best else "タグなし"),
+        "title": "・".join(t.name for t in tags) or (best.name if best else "タグなし"),
         "badge": best,  # バッジの見た目は templates/components/badge.html に best.code を渡して描く
+        # バッジの無い記録（調査中の「直前の音を投稿」）は、1つ目のタグのメダルで出す
+        "tag": tags[0].medal if tags and not best else None,
     }
 
 
 def mypage(request):
-    """マイページ。数字のまとめ、集めたバッジ（時間帯で絞り込める）、季節タグ図鑑を出す。"""
+    """マイページ。数字のまとめ、dBバッジ（時間帯で絞り込める）、音の図鑑を出す。
+
+    どちらもカードを押すと「図鑑のシート」が開き、説明とこれまでの標本（音の模様入りのバッジ）が並ぶ。
+    シートの中身は zukan_data にまとめて渡し、static/js/mypage.js が描く。
+    """
     user = request.user
     if not user.is_authenticated:
         # 見えないアカウントのミドルウェアが作るので、ふつうは来ない
         return redirect("/")
 
-    # --- 集めたバッジ：「バッジの種類 × 時間帯」ごとに何個取ったか。取ったものだけ並べる ---
-    counts = Counter(
-        (ub.badge_type.code, ub.time_band_id)
-        for ub in UserBadge.objects.filter(user=user).select_related("badge_type")
-    )
-    bands = list(TimeBand.objects.all())  # 今は使っていない時間帯で取ったバッジも数える
-    most = max(counts.values(), default=1)  # 棒グラフは一番多いものを100%にする
-    badge_rows = [
-        {
-            "code": code,
-            "label": BADGE_LABELS[code],
-            "band": band,
-            "count": counts[(code, band.id)],
-            "rare": (code, band.code) in RARE,
-            "percent": round(counts[(code, band.id)] / most * 100),
-        }
-        for code in BADGE_CODES  # 並びは 90dB → 80dB → 70dB → 静寂 → 深い静寂、その中で時間帯の順
-        for band in bands
-        if counts[(code, band.id)]
-    ]
-    badge_total = sum(counts.values())
+    bands = list(TimeBand.objects.all())  # 今は使っていない時間帯で取ったバッジも出す
+    zukan_data = {}  # シートの中身。キーはカードの data-key
 
-    # --- 季節タグ図鑑：自分の測定に付けたことのある季節タグが「登録済み」 ---
-    collected = set(
-        MeasurementTag.objects.filter(
-            measurement__user=user, tag__tag_type=Tag.TagType.SEASONAL
-        ).values_list("tag_id", flat=True)
+    # --- dBバッジ：「バッジの種類 × 時間帯」の10枠を全部並べる（取っていない枠は鍵つき） ---
+    user_badges = (
+        UserBadge.objects.filter(user=user)
+        .select_related("badge_type", "time_band", "measurement")
+        .prefetch_related("measurement__tags")
+        .order_by("-acquired_at")
     )
-    seasonal = [
-        {"tag": tag, "collected": tag.id in collected, "now": tag.is_available()}
-        for tag in Tag.objects.filter(tag_type=Tag.TagType.SEASONAL, is_active=True)
-    ]
+    by_slot = {}
+    for ub in user_badges:
+        by_slot.setdefault((ub.badge_type.code, ub.time_band_id), []).append(ub)
+
+    badge_cards = []
+    for code in BADGE_CODES:  # 並びは 90dB → 80dB → 70dB → 静寂 → 深い静寂、その中で時間帯の順
+        for band in bands:
+            got = by_slot.get((code, band.id), [])
+            if not got and not band.is_active:
+                continue
+            key = f"b-{code}-{band.id}"
+            rare = (code, band.code) in RARE
+            card = {
+                "key": key,
+                "code": code,
+                "label": BADGE_LABELS[code],
+                "band": band,
+                "count": len(got),
+                "rare": rare,
+            }
+            badge_cards.append(card)
+            zukan_data[key] = {
+                "kind": "badge",
+                "code": code,
+                "band": band.code,
+                "title": BADGE_LABELS[code],
+                "chips": [band.name] + (["レア！"] if rare else []),
+                "count": len(got),
+                "text": BADGE_TEXT[code] if got else f"{band.name}に、{BADGE_HINT[code]}",
+                "items": [_specimen(ub) for ub in got[:ZUKAN_ITEMS]],
+            }
+    badge_total = len(user_badges)
+
+    # --- 音の図鑑：共通タグも季節タグも混ぜて、番号を付けて並べる ---
+    #   自分の測定に付けたことのあるタグが「出会った」。まだのものは「？？？」とヒント
+    tagged = (
+        MeasurementTag.objects.filter(measurement__user=user)
+        .select_related("measurement__time_band")
+        .prefetch_related("measurement__badges__badge_type", "measurement__tags")
+        .order_by("-measurement__measured_at")
+    )
+    by_tag = {}
+    for mt in tagged:
+        by_tag.setdefault(mt.tag_id, []).append(mt.measurement)
+
+    tag_cards = []
+    for number, tag in enumerate(Tag.objects.filter(is_active=True), start=1):
+        met = by_tag.get(tag.id, [])
+        key = f"t-{tag.id}"
+        seasonal = tag.tag_type == Tag.TagType.SEASONAL
+        card = {
+            "key": key,
+            "tag": tag,
+            "color": tag.medal["color"],
+            "number": number,
+            "icon": tag.icon or tag.name[:1],
+            "count": len(met),
+            "collected": bool(met),
+            "now": seasonal and tag.is_available(),
+        }
+        tag_cards.append(card)
+        chips = []
+        if tag.is_rare:
+            chips.append("レア！")
+        if seasonal:
+            chips.append(tag.period_label or "期間限定")
+        zukan_data[key] = {
+            "kind": "tag",
+            "number": number,
+            "icon": card["icon"],
+            "tag": tag.medal,  # badge.js の tagMedal() に渡す { name, icon, color }
+            # まだ出会っていないものは、名前も説明も渡さない（ページのソースから分からないように）
+            "title": tag.name if met else "？？？",
+            "chips": chips,
+            "count": len(met),
+            "text": (tag.description or "説明はまだありません") if met else tag.hint_text,
+            "items": [_specimen_of(m) for m in met[:ZUKAN_ITEMS]],
+        }
 
     return render(
         request,
         "mypage.html",
         {
             "title": "マイページ",
-            "badge_rows": badge_rows,
+            "badge_cards": badge_cards,
             "badge_total": badge_total,
             # 絞り込みのタブ（すべて／昼／夜）。管理画面で時間帯を足すとタブも増える
             "band_tabs": [band for band in bands if band.is_active],
-            "seasonal": seasonal,
-            "seasonal_collected": sum(s["collected"] for s in seasonal),
+            "tag_cards": tag_cards,
+            "tag_collected": sum(c["collected"] for c in tag_cards),
             # 「調査回数」は測定記録の数（10秒ごとの区間1つで1回）
             "survey_count": user.measurements.count(),
+            "zukan_data": zukan_data,
         },
     )
+
+
+def _specimen(user_badge):
+    """図鑑のシートに並べる標本1つ分（獲得したバッジ1つ）"""
+    m = user_badge.measurement
+    return {
+        "code": user_badge.badge_type.code,
+        "band": user_badge.time_band.code,
+        "spectrum": m.spectrum,  # 音の形。badge.js の medal(..., { spectrum }) で模様になる
+        "at": _when(m.measured_at),
+        "avg_db": round(float(m.avg_db), 1),
+        "tags": [t.name for t in m.tags.all()],
+    }
+
+
+def _specimen_of(measurement):
+    """タグを付けた測定1つ分。見た目はそのタグのメダル（mypage.js）に、この測定の音の模様を描く"""
+    badges = list(measurement.badges.all())
+    best = max(badges, key=lambda b: b.badge_type.strength) if badges else None
+    return {
+        "code": best.badge_type.code if best else None,
+        "band": measurement.time_band.code if measurement.time_band_id else None,
+        "spectrum": measurement.spectrum,
+        "at": _when(measurement.measured_at),
+        "avg_db": round(float(measurement.avg_db), 1),
+        "tags": [t.name for t in measurement.tags.all()],
+    }
+
+
+def _when(dt):
+    """2026/10/17 14:05 の形（%-m は Windows で使えないので自分で組み立てる）"""
+    t = timezone.localtime(dt)
+    return f"{t.year}/{t.month}/{t.day} {t:%H:%M}"
 
 
 def health(request):

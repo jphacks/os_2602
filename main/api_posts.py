@@ -4,10 +4,11 @@
 # ▼ 投稿の流れ
 #
 #   調査ページでバッジを獲得 → 獲得ポップアップの「音の内容を投稿する」→ 投稿シート
+#   調査中の「直前の音を投稿」→ 投稿シート（バッジの無い測定も投稿できる）
 #   → static/js/survey_page.js が POST /api/posts に送る
 #     （写真があるので JSON ではなくフォームの形）
 #
-#   1つの獲得バッジにつき投稿は1件（models.py の Post）。
+#   1つの測定につき投稿は1件（models.py の Post）。バッジのある測定なら、そのバッジの投稿になる。
 #   選んだタグは「測定記録のタグ」（MeasurementTag）として付ける。
 #
 # ▼ 写真
@@ -20,7 +21,9 @@
 #   GET /api/badges/everyone/
 #     見えている範囲の「投稿のある」バッジを、全員分返す。
 #   投稿していない記録は場所を出さない（自宅などを知られないように）。
-#   ローカルマップ（自分のバッジ）は api_badges.py。どちらも post_badge_dict() の形で返す。
+#   ローカルマップ（自分のバッジ）は api_badges.py。
+#   ピン1つ分の形は、バッジなら post_badge_dict()、
+#   バッジの無い投稿なら tag_post_dict()（タグのメダルで出す）。
 # =============================================================================
 
 import uuid
@@ -28,11 +31,12 @@ from io import BytesIO
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Q
 from django.views.decorators.http import require_http_methods
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from main.api import json_response
-from main.models import BadgeType, MeasurementTag, Post, Tag, UserBadge
+from main.models import BadgeType, Measurement, MeasurementTag, Post, Tag, UserBadge
 
 # --- 調整する数値はここだけ -------------------------------------------------
 MAX_DESCRIPTION = 200  # 内容の文字数の上限
@@ -47,23 +51,36 @@ MAX_BADGES = 500  # 全国マップで1回に返す上限（api_badges.py と同
 def create_post(request):
     """POST /api/posts（フォームの形）
 
-    user_badge_id … どの獲得バッジの投稿か（測定APIの返事の badge.user_badge_id）
-    tag_ids       … 選んだタグのID。複数なら同じ名前で何個も送る。1つ以上必須
+    user_badge_id  … どの獲得バッジの投稿か（測定APIの返事の badge.user_badge_id）
+    measurement_id … バッジの無い測定に投稿するとき（測定APIの返事の measurement.id）
+                     ★どちらか1つ。バッジのある測定の measurement_id なら、そのバッジの投稿にする
+    tag_ids        … 選んだタグのID。複数なら同じ名前で何個も送る。1つ以上必須
     description   … 内容（任意）
     photo         … 写真（任意）
     """
     if not request.user.is_authenticated:
         return json_response({"error": "もう一度ページを開き直してください。"}, status=401)
 
-    # --- どのバッジの投稿か（自分のバッジだけ） ---
+    # --- どの測定の投稿か（自分の測定だけ） ---
     try:
-        user_badge = UserBadge.objects.select_related("measurement").get(
-            pk=int(request.POST.get("user_badge_id", "")), user=request.user
-        )
-    except (ValueError, UserBadge.DoesNotExist):
-        return json_response({"error": "投稿するバッジが見つかりません。"}, status=404)
-    if Post.objects.filter(user_badge=user_badge).exists():
-        return json_response({"error": "このバッジはもう投稿済みです。"}, status=409)
+        if request.POST.get("user_badge_id"):
+            user_badge = UserBadge.objects.select_related("measurement").get(
+                pk=int(request.POST["user_badge_id"]), user=request.user
+            )
+            measurement = user_badge.measurement
+        else:
+            measurement = Measurement.objects.get(
+                pk=int(request.POST.get("measurement_id", "")), user=request.user
+            )
+            # バッジのある測定なら、一番強いバッジの投稿にする（地図にバッジとして出る）
+            badges = list(measurement.badges.select_related("badge_type"))
+            user_badge = max(badges, key=lambda b: b.badge_type.strength) if badges else None
+    except (ValueError, UserBadge.DoesNotExist, Measurement.DoesNotExist):
+        return json_response({"error": "投稿する記録が見つかりません。"}, status=404)
+    if Post.objects.filter(
+        Q(measurement=measurement) | Q(user_badge__measurement=measurement)
+    ).exists():
+        return json_response({"error": "この記録はもう投稿済みです。"}, status=409)
 
     # --- タグ（今選べるものだけ） ---
     try:
@@ -96,21 +113,18 @@ def create_post(request):
             return json_response({"error": message}, status=400)
 
     with transaction.atomic():
-        post = Post(user_badge=user_badge, description=description)
+        post = Post(user_badge=user_badge, measurement=measurement, description=description)
         if photo:
             post.photo.save(f"{uuid.uuid4().hex}.jpg", photo, save=False)
         post.save()
         for tag_id in tag_ids:
-            MeasurementTag.objects.get_or_create(
-                measurement=user_badge.measurement, tag=available[tag_id]
-            )
+            MeasurementTag.objects.get_or_create(measurement=measurement, tag=available[tag_id])
 
-    user_badge = (
-        UserBadge.objects.select_related("badge_type", "time_band", "measurement", "post")
-        .prefetch_related("measurement__tags")
-        .get(pk=user_badge.pk)
-    )
-    return json_response({"badge": post_badge_dict(user_badge)}, status=201)
+    if user_badge:
+        pin = post_badge_dict(with_post_data(UserBadge.objects).get(pk=user_badge.pk), request.user)
+    else:
+        pin = tag_post_dict(with_tag_post_data(Post.objects).get(pk=post.pk), request.user)
+    return json_response({"badge": pin}, status=201)
 
 
 def clean_photo(upload) -> ContentFile:
@@ -152,10 +166,72 @@ def everyone_badges(request):
     )
     if time_band is not None:
         badges = badges.filter(time_band_id=time_band)
-
-    return json_response(
-        {"badges": [post_badge_dict(ub, request.user) for ub in badges[:MAX_BADGES]]}
+    pins = [post_badge_dict(ub, request.user) for ub in badges[:MAX_BADGES]]
+    pins += tag_post_pins(
+        Q(), (south, north, west, east), time_band, request.user, MAX_BADGES - len(pins)
     )
+    return json_response({"badges": pins})
+
+
+def tag_post_pins(where, box, time_band, viewer, limit):
+    """バッジの無い投稿（タグのメダルで出す）のピン。
+
+    where で絞る（ローカルマップなら自分の投稿だけ）。
+    """
+    if limit <= 0:
+        return []
+    south, north, west, east = box
+    posts = with_tag_post_data(
+        Post.objects.filter(
+            where,
+            user_badge__isnull=True,
+            measurement__latitude__range=(south, north),
+            measurement__longitude__range=(west, east),
+        ).order_by("-created_at")
+    )
+    if time_band is not None:
+        posts = posts.filter(measurement__time_band_id=time_band)
+    return [tag_post_dict(p, viewer) for p in posts[:limit]]
+
+
+def with_tag_post_data(queryset):
+    """tag_post_dict() に必要なものを、まとめて読み込んでおく"""
+    return queryset.select_related("measurement__time_band").prefetch_related("measurement__tags")
+
+
+def tag_post_dict(post: Post, viewer=None) -> dict:
+    """バッジの無い投稿のピン1つ分。形は post_badge_dict() とそろえ、kind と tag が違う
+
+    見た目は、付けたタグの1つ目（図鑑の並び順で先のもの）のメダル。
+    """
+    m = post.measurement
+    tags = list(m.tags.all())
+    main_tag = tags[0] if tags else None
+    band = m.time_band
+    return {
+        "id": f"p{post.id}",  # バッジのピンの id（数字）とぶつからないように
+        "kind": "tag",
+        "lat": float(m.latitude),
+        "lng": float(m.longitude),
+        "name": main_tag.name if main_tag else "投稿",
+        "code": None,
+        "tag": main_tag.medal if main_tag else {"name": "投稿", "icon": "音", "color": "sage"},
+        "rare_tag": bool(main_tag and main_tag.is_rare),
+        "time_band": m.time_band_id,
+        "time_band_name": band.name if band else "",
+        "time_band_code": band.code if band else None,
+        "avg_db": float(m.avg_db),
+        "max_db": float(m.max_db),
+        "measured_at": m.measured_at.isoformat(),
+        "spectrum": m.spectrum,
+        "mine": viewer is not None and m.user_id == viewer.id,
+        "tags": [{"id": t.id, "name": t.name, "icon": tag_icon(t)} for t in tags],
+        "post": {
+            "description": post.description,
+            "photo": post.photo.url if post.photo else None,
+            "created_at": post.created_at.isoformat(),
+        },
+    }
 
 
 def with_post_data(queryset):
@@ -176,6 +252,7 @@ def post_badge_dict(ub: UserBadge, viewer=None) -> dict:
     post = getattr(ub, "post", None)
     return {
         "id": ub.id,
+        "kind": "badge",
         "lat": float(m.latitude),
         "lng": float(m.longitude),
         "name": bt.name,

@@ -10,7 +10,8 @@
      リーダーの部品 static/js/badge.js（DetherBadge）で作る。コード（b80 など）を渡すだけでよい。
 
    ▼ 開発用：マイクの無いPCで試すとき
-     /?sim=loud（85dB前後）や /?sim=quiet（37dB前後）で開くと、マイクの代わりに作った音で動く。
+     /?sim=loud（85dB前後）・/?sim=mid（60dB前後。バッジが出ない）・/?sim=quiet（37dB前後）で開くと、
+     マイクの代わりに作った音で動く。
      位置は東京駅になる。記録はふつうにサーバーへ送るので、本番のURLでは使わないこと。
    =========================================================================== */
 
@@ -75,9 +76,14 @@
   // （survey.sessionCount は送るのに成功した数。位置が取れない・通信の失敗では増えない）
   let roundsDone = 0;
   let warningTimer = null;
-  // 獲得ポップアップに出しているバッジ（投稿シートで使う）と、「最近の記録」に足したその行
-  let popupBadge = null;
-  let popupRow = null;
+  // 投稿できる記録 rec = { measurementId, userBadgeId, badge, name, result, timeBand, row }
+  //   popupRec   … 獲得ポップアップに出しているバッジの記録（投稿できないときは null）
+  //   lastRecord … 直前の測定（調査中の「直前の音を投稿する」で使う）
+  //   postTarget … 投稿シートで投稿しようとしている記録と、どこから開いたか（"popup" / "live"）
+  let popupRec = null;
+  let lastRecord = null;
+  let postTarget = null;
+  const postedIds = new Set(); // この画面で投稿した（送っている）測定の id
 
   // サーバーが描いた「最近の記録」のメダルを、押せるボタンに作り直す（中身は index.html の data-*）
   document.querySelectorAll("#recent-list [data-badge]").forEach((row) => {
@@ -109,18 +115,25 @@
   });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!$("post-sheet").hidden) backToPopup(); // 投稿シートなら、獲得ポップアップに戻るだけ
+    if (!$("post-sheet").hidden) postBack(); // 投稿シートは「戻る」と同じ
     else if (!$("badge-popup").hidden) closePopup();
   });
 
   // 投稿シート。★背景を押しても閉じない（書きかけの内容が消えないように）
-  $("badge-popup-post").addEventListener("click", openPost);
-  $("post-back").addEventListener("click", backToPopup);
+  $("badge-popup-post").addEventListener("click", () => openPost(popupRec, "popup"));
+  // 調査中の「直前の音を投稿する」。一時停止してから開く（★survey の操作なのでボタンの処理の中で）
+  $("live-post").addEventListener("click", () => {
+    if (!lastRecord || postedIds.has(lastRecord.measurementId)) return;
+    survey.pause();
+    openPost(lastRecord, "live");
+  });
+  $("post-back").addEventListener("click", postBack);
   $("post-form").addEventListener("submit", submitPost);
   document.querySelectorAll("#post-form .tag-chip").forEach((chipEl) => {
     chipEl.addEventListener("click", () => {
       chipEl.setAttribute("aria-pressed", String(chipEl.getAttribute("aria-pressed") !== "true"));
       $("post-submit").disabled = selectedTagIds().length === 0;
+      showPostMedal();
     });
   });
   $("post-photo").addEventListener("change", showPhoto);
@@ -194,13 +207,15 @@
     const d = e.detail;
     const note = d.badge ? `${NAMES[d.badge]}（この調査で獲得済み）` : "バッジなし";
     updateSession(d.result, note, null);
-    addRecent(d.result, d.badge, d.timeBand);
+    const row = addRecent(d.result, d.badge, d.timeBand);
+    remember(d, row);
   });
 
   survey.on("badge", (e) => {
     const d = e.detail;
     updateSession(d.result, d.name, d.badge);
     const row = addRecent(d.result, d.badge, d.timeBand);
+    remember(d, row);
     openPopup(d, row);
   });
 
@@ -229,6 +244,40 @@
     $("session-last").textContent = "直前の測定：まだありません";
     pill.textContent = STATE_TEXT.starting;
     delete pill.dataset.mode;
+    lastRecord = null;
+    updateLivePost();
+  }
+
+  // 測定APIの返事から、投稿できる記録を作る（保存できなかった測定は投稿できないので null）
+  function recordOf(d, row) {
+    const res = d.response || {};
+    const measurementId = res.measurement ? res.measurement.id : null;
+    if (!measurementId) return null;
+    return {
+      measurementId,
+      userBadgeId: res.badge ? res.badge.user_badge_id : null,
+      badge: d.badge || null,
+      name: d.badge ? NAMES[d.badge] : null,
+      result: d.result,
+      timeBand: d.timeBand,
+      row,
+    };
+  }
+
+  function remember(d, row) {
+    lastRecord = recordOf(d, row);
+    updateLivePost();
+  }
+
+  // 「直前の音を投稿する」の押せる・押せない と、下の説明
+  function updateLivePost() {
+    const rec = lastRecord;
+    const posted = !!rec && postedIds.has(rec.measurementId);
+    $("live-post").disabled = !rec || posted;
+    $("live-post-label").textContent = posted ? "投稿しました" : "直前の音を投稿する";
+    $("live-post-note").textContent = rec
+      ? `直前：${fmt1(rec.result.avgDb)} dB・${rec.name || "バッジなし"}`
+      : "測定が1回終わると投稿できます";
   }
 
   // 波形を左に1本ずらして、右端に今の音量を足す
@@ -278,6 +327,24 @@
     return row;
   }
 
+  // バッジの無い記録を投稿したとき、「最近の記録」の先頭にタグのメダルで1行足す
+  function addTagRecent(rec, tag, tagNames) {
+    const row = $("recent-row").content.firstElementChild.cloneNode(true);
+    const slot = (name) => row.querySelector(`[data-slot="${name}"]`);
+    const at = rec.result.endedAt;
+    slot("db").textContent = fmt1(rec.result.avgDb);
+    slot("title").textContent = tagNames.join("・");
+    slot("meta").textContent =
+      `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, "0")}:` +
+      `${String(at.getMinutes()).padStart(2, "0")}` + (rec.timeBand ? `・${rec.timeBand.name}` : "");
+    slot("badge").replaceWith(Badge.tagMedal(tag, "md", { spectrum: rec.result.spectrum }));
+
+    const list = $("recent-list");
+    list.prepend(row);
+    while (list.children.length > RECENT_MAX) list.lastElementChild.remove();
+    $("recent-empty").hidden = true;
+  }
+
   // 「最近の記録」のメダル。押すと、獲得ポップアップと同じ形でその記録を見せる
   // rec = { badge, avgDb, maxDb, at（"10/17 18:32"）, timeBand（{ code, name } か null）, spectrum }
   function recentMedal(rec) {
@@ -305,7 +372,7 @@
     $("badge-popup-avg").textContent = fmt1(rec.avgDb);
     $("badge-popup-max").textContent = fmt1(rec.maxDb);
     $("badge-popup-band").textContent = bandName || "--";
-    popupBadge = null;
+    popupRec = null;
     $("badge-popup-post").hidden = true;
 
     $("badge-popup").hidden = false;
@@ -334,11 +401,9 @@
     $("badge-popup-avg").textContent = fmt1(d.result.avgDb);
     $("badge-popup-max").textContent = fmt1(d.result.maxDb);
     $("badge-popup-band").textContent = bandName || "--";
-    // 投稿できるのは、サーバーに保存できたバッジだけ（管理画面にバッジの種類が無いときなどは保存されない）
-    const userBadgeId = d.response && d.response.badge ? d.response.badge.user_badge_id : null;
-    popupBadge = userBadgeId ? { ...d, userBadgeId } : null;
-    popupRow = row;
-    $("badge-popup-post").hidden = !popupBadge;
+    // 投稿できるのは、サーバーに保存できた記録だけ
+    popupRec = recordOf(d, row);
+    $("badge-popup-post").hidden = !popupRec;
 
     $("badge-popup").hidden = false;
     $("badge-popup-close").focus();
@@ -352,12 +417,11 @@
 
   /* ---------- 投稿シート ---------- */
 
-  function openPost() {
-    const d = popupBadge;
-    if (!d) return;
-    const band = d.timeBand ? d.timeBand.code : null;
-    $("post-medal").replaceChildren(Badge.medal(d.badge, "list", { band }));
-    $("post-sub").textContent = [d.name, d.timeBand && d.timeBand.name, `${fmt1(d.result.avgDb)} dB`]
+  // rec … 投稿する記録 / from … "popup"（獲得ポップアップから）か "live"（調査中のボタンから）
+  function openPost(rec, from) {
+    if (!rec) return;
+    postTarget = { rec, from };
+    $("post-sub").textContent = [rec.name || "バッジなし", rec.timeBand && rec.timeBand.name, `${fmt1(rec.result.avgDb)} dB`]
       .filter(Boolean)
       .join("・");
 
@@ -365,6 +429,7 @@
     $("post-form").reset();
     document.querySelectorAll("#post-form .tag-chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
     $("post-submit").disabled = true;
+    showPostMedal();
     showPhoto();
     postError("");
 
@@ -374,11 +439,37 @@
     $("post-back").focus();
   }
 
-  function backToPopup() {
-    $("post-sheet").hidden = true;
-    $("badge-popup").hidden = false;
-    $("badge-popup-post").focus();
+  // 投稿シートの左上のメダル。バッジがあればそのバッジ、無ければ選んだ1つ目のタグのメダル
+  // （まだ選んでいないときは dB の数字のメダル）。どれも、その音の模様入り
+  function showPostMedal() {
+    if (!postTarget) return;
+    const rec = postTarget.rec;
+    const opt = { band: rec.timeBand && rec.timeBand.code, spectrum: rec.result.spectrum };
+    if (rec.badge) {
+      $("post-medal").replaceChildren(Badge.medal(rec.badge, "list", opt));
+      return;
+    }
+    const first = document.querySelector('#post-form .tag-chip[aria-pressed="true"]');
+    const tag = first
+      ? { name: tagName(first), icon: first.dataset.icon, color: first.dataset.color }
+      : { name: "直前の音", icon: String(Math.round(rec.result.avgDb)), color: "sage" };
+    $("post-medal").replaceChildren(Badge.tagMedal(tag, "list", opt));
   }
+
+  // 「戻る」：獲得ポップアップから来たら戻る。調査中のボタンから来たら閉じて調査を再開する
+  function postBack() {
+    $("post-sheet").hidden = true;
+    if (postTarget && postTarget.from === "popup") {
+      $("badge-popup").hidden = false;
+      $("badge-popup-post").focus();
+    } else {
+      survey.resume(); // ★ボタンやキーの処理の中で呼ぶ（iPhone の決まり）
+      $("live-post").focus();
+    }
+    postTarget = null;
+  }
+
+  const tagName = (chipEl) => chipEl.lastChild.textContent.trim();
 
   function selectedTagIds() {
     return [...document.querySelectorAll('#post-form .tag-chip[aria-pressed="true"]')].map(
@@ -416,27 +507,32 @@
   //   送った結果は、画面上のお知らせ（main.js の showMessage）で伝える。
   function submitPost(e) {
     e.preventDefault();
-    const d = popupBadge;
+    const rec = postTarget && postTarget.rec;
     const tagIds = selectedTagIds();
-    if (!d || !tagIds.length) {
+    if (!rec || !tagIds.length) {
       postError("何の音だったか、タグを1つ以上選んでください");
       return;
     }
 
     const form = new FormData();
-    form.append("user_badge_id", d.userBadgeId);
+    // バッジがあればバッジの投稿、無ければ測定の投稿（main/api_posts.py）
+    if (rec.userBadgeId) form.append("user_badge_id", rec.userBadgeId);
+    else form.append("measurement_id", rec.measurementId);
     tagIds.forEach((id) => form.append("tag_ids", id));
     form.append("description", $("post-description").value.trim());
     const photo = $("post-photo").files[0];
     if (photo) form.append("photo", photo);
 
     // 「最近の記録」の行のタイトルを、選んだタグにする（index() がタグを先に出すのと同じ）
-    const tagNames = [...document.querySelectorAll('#post-form .tag-chip[aria-pressed="true"]')].map(
-      (c) => c.lastChild.textContent.trim()
-    );
-    const row = popupRow;
+    const chosen = [...document.querySelectorAll('#post-form .tag-chip[aria-pressed="true"]')];
+    const tagNames = chosen.map(tagName);
+    const firstTag = { name: tagNames[0], icon: chosen[0].dataset.icon, color: chosen[0].dataset.color };
+    const row = rec.row;
 
-    popupBadge = null;
+    postTarget = null;
+    if (rec === popupRec) popupRec = null;
+    postedIds.add(rec.measurementId); // 二重に送らないよう、返事を待たずに「投稿済み」にする
+    updateLivePost();
     $("post-sheet").hidden = true;
     survey.resume();
 
@@ -451,8 +547,13 @@
         showMessage("投稿しました。マップに載りました", "success");
         const title = row && row.querySelector('[data-slot="title"]');
         if (title) title.textContent = tagNames.join("・");
+        else if (!rec.badge) addTagRecent(rec, firstTag, tagNames); // バッジの無い記録は、ここで初めて足す
       })
-      .catch((err) => showMessage(`投稿できませんでした：${err.message}`, "error"));
+      .catch((err) => {
+        postedIds.delete(rec.measurementId); // もう一度投稿できるように戻す
+        updateLivePost();
+        showMessage(`投稿できませんでした：${err.message}`, "error");
+      });
   }
 
   function showError(message) {
@@ -463,7 +564,7 @@
 
   // 開発用：マイクの代わりの音（measure-test.html と同じ考え方）
   function makeSimulator(kind) {
-    const base = kind === "quiet" ? 37 : 85;
+    const base = { quiet: 37, mid: 60 }[kind] || 85;
     const t0 = performance.now();
     return () => {
       const t = (performance.now() - t0) / 1000;

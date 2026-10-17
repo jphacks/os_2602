@@ -231,10 +231,28 @@ class UserBadge(models.Model):
 
 # ===== ⑦ 投稿 =====
 class Post(models.Model):
-    """獲得バッジ1つにつき投稿は最大1件"""
+    """測定1回（獲得バッジがあればそのバッジ）につき投稿は最大1件
+
+    バッジのある測定 … user_badge と measurement の両方が入る
+    バッジの無い測定 … measurement だけ（調査中の「直前の音を投稿」から。地図ではタグのメダルで出る）
+    ★measurement が空の投稿は、この列ができる前に作ったもの（user_badge.measurement が元の測定）
+    """
 
     user_badge = models.OneToOneField(
-        UserBadge, on_delete=models.CASCADE, related_name="post", verbose_name="獲得バッジ"
+        UserBadge,
+        on_delete=models.CASCADE,
+        related_name="post",
+        verbose_name="獲得バッジ",
+        null=True,
+        blank=True,
+    )
+    measurement = models.OneToOneField(
+        Measurement,
+        on_delete=models.CASCADE,
+        related_name="post",
+        verbose_name="測定記録",
+        null=True,
+        blank=True,
     )
     description = models.TextField("説明文", blank=True)
     photo = models.ImageField("写真", upload_to="posts/%Y/%m/", blank=True)  # EXIFは保存前に消す
@@ -245,7 +263,13 @@ class Post(models.Model):
         verbose_name = verbose_name_plural = "投稿"
 
     def __str__(self):
-        return f"投稿 {self.id}（{self.user_badge}）"
+        return f"投稿 {self.id}（{self.user_badge or self.measurement}）"
+
+    def save(self, *args, **kwargs):
+        # バッジの投稿でも、元の測定を必ず入れておく（測定から投稿をたどれるように）
+        if self.measurement_id is None and self.user_badge_id:
+            self.measurement_id = self.user_badge.measurement_id
+        super().save(*args, **kwargs)
 
 
 # ===== ⑤ タグ =====
@@ -255,6 +279,17 @@ class Tag(models.Model):
     class TagType(models.TextChoices):
         COMMON = "common", "共通"
         SEASONAL = "seasonal", "季節"
+
+    class MedalColor(models.TextChoices):
+        # タグのメダルの色の組（static/css/badge.css の .m-tag-○○ と同じ名前）
+        SAGE = "sage", "セージ"
+        MOSS = "moss", "苔"
+        AI = "ai", "藍"
+        SHU = "shu", "朱"
+        YAMABUKI = "yamabuki", "山吹"
+        FUJI = "fuji", "藤"
+        SAKURA = "sakura", "桜"
+        SUMI = "sumi", "墨"
 
     name = models.CharField("名前", max_length=50)
     icon = models.CharField("アイコン", max_length=255, blank=True)
@@ -273,6 +308,25 @@ class Tag(models.Model):
         max_length=30,
         blank=True,
         help_text="季節タグ図鑑に出す言葉。空なら開始・終了の月日から自動で作る（例：6月〜8月）",
+    )
+
+    # 音の図鑑（マイページ）に出す言葉。まだ出会っていないときはヒント、出会ったら説明を出す
+    hint = models.CharField(
+        "ヒント",
+        max_length=60,
+        blank=True,
+        help_text="まだ出会っていないときに「？？？」の下に出す言葉。空なら期間から自動で作る",
+    )
+    description = models.TextField(
+        "説明", blank=True, help_text="出会ったあとに図鑑で読める説明"
+    )
+    is_rare = models.BooleanField("レア", default=False, help_text="図鑑に「レア！」の印を付ける")
+    medal_color = models.CharField(
+        "メダルの色",
+        max_length=20,
+        choices=MedalColor.choices,
+        default=MedalColor.SAGE,
+        help_text="図鑑や地図に出す、このタグのメダルの色",
     )
 
     is_active = models.BooleanField("有効", default=True)
@@ -307,6 +361,24 @@ class Tag(models.Model):
         if sm == em:
             return f"{sm}月{sd}日〜{ed}日"
         return f"{sm}月{sd}日〜{em}月{ed}日"
+
+    @property
+    def medal(self):
+        """badge.js の DetherBadge.tagMedal() / pin() にそのまま渡せる形"""
+        return {
+            "name": self.name,
+            "icon": self.icon or self.name[:1],
+            "color": self.medal_color or self.MedalColor.SAGE,
+        }
+
+    @property
+    def hint_text(self):
+        """図鑑の「？？？」の下に出すヒント。「ヒント」が空なら、季節タグは期間、共通タグは決まり文句"""
+        if self.hint:
+            return self.hint
+        if self.tag_type == self.TagType.SEASONAL:
+            return f"期間限定（{self.period_label}）" if self.period_label else "期間限定"
+        return "いつでも出会える音"
 
     def is_available(self, dt=None):
         """いま（または dt の日時に）選択肢に出してよいか"""

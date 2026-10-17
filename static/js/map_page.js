@@ -135,11 +135,17 @@
     const slot = (name) => item.querySelector(`[data-slot="${name}"]`);
     const band = b.time_band_code || null;
 
-    slot('medal').replaceWith(Badge.medal(b.code, 'list', { band, spectrum: b.spectrum }));
+    // バッジの無い投稿（kind: 'tag'）は、タグのメダル
+    const isTag = b.kind === 'tag';
+    slot('medal').replaceWith(
+      isTag
+        ? Badge.tagMedal(b.tag, 'list', { spectrum: b.spectrum })
+        : Badge.medal(b.code, 'list', { band, spectrum: b.spectrum })
+    );
     slot('name').textContent = b.name;
     const chips = slot('chips');
     if (b.time_band_name) chips.append(chip(b.time_band_name));
-    if (band && Badge.isRare(b.code, band)) chips.append(chip('レア', 'chip--rare'));
+    if (isTag ? b.rare_tag : band && Badge.isRare(b.code, band)) chips.append(chip('レア', 'chip--rare'));
     if (detherMap.scope === 'everyone' && b.mine) chips.append(chip('あなた', 'chip--mine'));
 
     slot('meta').textContent = formatDate(b.measured_at) + `・最大 ${Number(b.max_db).toFixed(1)} dB`;
