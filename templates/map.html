@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}マップ | dether{% endblock %}
+
+{% block content %}
+  <link rel="stylesheet" href="{% static 'css/map.css' %}">
+  <style>
+    /* ヘッダー分を引いた高さ。ヘッダーの高さが違う場合は 120px を調整する */
+    .map-wrap { position: relative; height: calc(100dvh - 120px); min-height: 360px; }
+  </style>
+
+  <div class="map-wrap">
+    <div
+      id="map"
+      class="dether-map"
+      data-api-key="{{ GOOGLE_MAPS_API_KEY }}"
+      data-map-id="{{ GOOGLE_MAP_ID }}"
+      data-badges-url="/api/badges/mine/"
+    ></div>
+    <button id="recenter" class="map-recenter" type="button">現在地へ</button>
+    <div id="badge-sheet" class="badge-sheet" hidden></div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script src="{% static 'js/map.js' %}"></script>
+  <script src="{% static 'js/map_page.js' %}"></script>
+{% endblock %}
