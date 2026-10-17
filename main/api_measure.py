@@ -5,7 +5,7 @@
 #
 #   ここ（api_measure.py） … 送られてきた値の確認、送りすぎの制限、バッジ判定、返事の組み立て
 #   measure_store.py       … DBに触る処理（保存・時間帯・ルールの読み込み・50mルール）
-#                            → ③のモデルがマージされたら、そちらだけ書き換える
+#                            モデルと50mルールの中身は③の main/models.py・main/badges.py
 #
 # ▼ なぜ api.py ではなく別ファイルか
 #
@@ -14,7 +14,6 @@
 # ▼ 送受信の形は docs/API_measurement.md を正とする
 # =============================================================================
 
-import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 
@@ -28,6 +27,7 @@ from django.views.decorators.http import require_http_methods
 
 from main import measure_store as store
 from main.api import json_response, read_json
+from main.middleware import random_username
 
 # --- 調整する数値はここだけ -------------------------------------------------
 RATE_LIMIT_PER_MINUTE = 20  # 通常は10秒ごと。判定の開始・取り消しで区間が短くなると増える（最短5秒）
@@ -69,8 +69,9 @@ def create_measurement(request):
 
     new_user = False
     if not request.user.is_authenticated:
-        # ★本来は③の「見えないアカウント」がページを開いた時点で作る。
-        #   まだ無い間も動くように、ここで作っておく（③の処理ができたら消してよい）
+        # ★本来は③の InvisibleAccountMiddleware がページを開いた時点で作る。
+        #   settings.py に登録される前や、ページを開かずにAPIだけ叩いた場合の保険
+        #   （ミドルウェアの登録後は、ここを401にしてもよい）
         _create_anonymous_user(request)
         new_user = True
 
@@ -175,12 +176,12 @@ def _rate_limited(user_id: int) -> bool:
     return count > RATE_LIMIT_PER_MINUTE
 
 
-# --- 見えないアカウント（③の処理ができるまでの仮） --------------------------------
+# --- 見えないアカウント（ミドルウェアが無いときの保険） ------------------------------
 
 
 def _create_anonymous_user(request):
     User = get_user_model()
-    user = User(username=f"anon_{uuid.uuid4().hex[:16]}")
+    user = User(username=random_username())  # ③と同じ形の名前（例：静かなフクロウ-3f9a2c）
     user.set_unusable_password()  # パスワードではログインできないようにする
     user.save()
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -236,9 +237,9 @@ def judge_badge(m: MeasurementInput, rules: list[store.BadgeRule]) -> store.Badg
     for rule in rules:
         if rule.series != m.judge or m.duration_seconds < rule.seconds - JUDGE_EPS:
             continue
-        if rule.series == "quiet" and m.avg_db <= rule.threshold_db:
+        if rule.at_least and m.avg_db >= rule.threshold_db:
             return rule
-        if rule.series == "loud" and m.avg_db >= rule.threshold_db:
+        if not rule.at_least and m.avg_db <= rule.threshold_db:
             return rule
     return None
 

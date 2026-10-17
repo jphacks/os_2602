@@ -1,39 +1,40 @@
 # =============================================================================
-# measure_store.py = 測定まわりでDBに触る処理（③が書き換える場所）
+# measure_store.py = 測定まわりでDBに触る処理
 #
 # ▼ このファイルの約束
 #
 #   api_measure.py（①）はDBに直接触らず、ここの関数だけを呼ぶ。
-#   ③のモデルがマージされたら、このファイルの「中身」だけを書き換える。
-#   関数名・引数・戻り値の形は変えない（変えるときは①に一言）。
+#   モデル（main/models.py）と50mルール（main/badges.py）は③の担当。ここはそれを呼ぶだけ。
 #
-#   今は「DBなしでも動く仮の中身」が入っている:
-#     ・時間帯とバッジのルールは、企画書の値を直書きして返す
-#     ・保存は何もせず、id は None を返す（api_measure.py が "saved": false で返す）
+# ▼ DBにデータが無いとき
 #
-# ▼ 書き換えるときのメモ（③向け）
-#
-#   ・api_measure.handle_measurement() が transaction.atomic() の中でこれらを呼ぶので、
-#     途中で失敗すれば測定とバッジはまとめて取り消される
-#   ・TimeBand は日をまたぐ（夜 22:00〜6:00 は start > end）。
-#     start <= end なら start <= t < end、そうでなければ t >= start or t < end
+#   ・TimeBand が無い・どれにも入らない時刻 … 昼6〜22時 / 夜の直書きで返す。バッジは保存しない
+#   ・BadgeType が1件も無い … 企画書の値で判定だけして返す。バッジは保存しない
+#   どちらも管理画面から登録すれば保存されるようになる（⑥）
 # =============================================================================
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.utils import timezone
 
+from main.badges import apply_50m_rule
+from main.models import BadgeType, Measurement, TimeBand, UserBadge
+
 if TYPE_CHECKING:
     from main.api_measure import MeasurementInput
+
+# 時間帯の名前 → 画面で使う短いコード（レアの判定用）。ここに無い時間帯は "t{id}"
+TIME_BAND_CODES = {"昼": "d", "夜": "n"}
 
 
 @dataclass(frozen=True)
 class TimeBandInfo:
-    id: int | None  # TimeBand.id（DBが無い間は None）
+    id: int | None  # TimeBand.id（DBに無い時刻なら None）
     name: str  # "昼" / "夜"
     code: str  # "d" / "n"（画面がレアの判定に使う）
 
@@ -42,11 +43,13 @@ class TimeBandInfo:
 class BadgeRule:
     """バッジ1種類の判定ルール（BadgeType 1行ぶん）。"""
 
-    code: str  # b90 / b80 / b70 / q40 / q35
+    code: str  # b90 / b80 / b70 / q40 / q35（画面のバッジ部品と同じ）
     name: str
-    series: str  # "loud"（Leqが threshold_db 以上）/ "quiet"（Leqが threshold_db 以下）
+    series: str  # "loud"（大きい音）/ "quiet"（静寂）。measure.js の judge と同じ言葉
     threshold_db: float
     seconds: float  # 必要な継続秒数（判定の区間がこれ以上続いたこと）
+    at_least: bool  # True = Leqが threshold_db 以上 / False = 以下
+    badge_type_id: int | None = None  # BadgeType.id（DBに無いルールなら None。保存しない）
 
 
 @dataclass(frozen=True)
@@ -55,21 +58,28 @@ class SavedBadge:
     replaced: str | None  # 50mルールで地図から外れた自分のバッジのコード（例 "b70"）。無ければ None
 
 
-# 企画書の値。BadgeType が入るまではこれを使う。★強い順に並べる（上から順に判定する）
+# BadgeType が1件も無いときに使う企画書の値（強い順）
 DEFAULT_RULES = [
-    BadgeRule("q35", "深い静寂バッジ", "quiet", 35.0, 15.0),
-    BadgeRule("q40", "静寂バッジ", "quiet", 40.0, 15.0),
-    BadgeRule("b90", "90dBバッジ", "loud", 90.0, 10.0),
-    BadgeRule("b80", "80dBバッジ", "loud", 80.0, 10.0),
-    BadgeRule("b70", "70dBバッジ", "loud", 70.0, 10.0),
+    BadgeRule("q35", "深い静寂バッジ", "quiet", 35.0, 15.0, at_least=False),
+    BadgeRule("q40", "静寂バッジ", "quiet", 40.0, 15.0, at_least=False),
+    BadgeRule("b90", "90dBバッジ", "loud", 90.0, 10.0, at_least=True),
+    BadgeRule("b80", "80dBバッジ", "loud", 80.0, 10.0, at_least=True),
+    BadgeRule("b70", "70dBバッジ", "loud", 70.0, 10.0, at_least=True),
 ]
 
 
-def get_time_band(measured_at: datetime) -> TimeBandInfo:
-    """測った時刻の時間帯。
+def badge_code(badge_type: BadgeType) -> str:
+    """BadgeType → 画面で使うコード。大きい音は b + しきい値、静寂は q + しきい値（例 b90, q35）"""
+    prefix = "b" if badge_type.category == BadgeType.Category.LOUD else "q"
+    return f"{prefix}{int(badge_type.threshold_db)}"
 
-    ★③：TimeBand から引く。今は昼 6:00〜22:00 / 夜 22:00〜6:00 の直書き。
-    """
+
+def get_time_band(measured_at: datetime) -> TimeBandInfo:
+    """測った時刻の時間帯（TimeBand から引く。日またぎは TimeBand.contains が扱う）"""
+    band = TimeBand.for_datetime(measured_at)
+    if band is not None:
+        return TimeBandInfo(id=band.id, name=band.name, code=TIME_BAND_CODES.get(band.name, f"t{band.id}"))
+    # DBに時間帯が無い間の仮（保存はされない）
     hour = timezone.localtime(measured_at).hour
     if 6 <= hour < 22:
         return TimeBandInfo(id=None, name="昼", code="d")
@@ -77,20 +87,38 @@ def get_time_band(measured_at: datetime) -> TimeBandInfo:
 
 
 def get_badge_rules() -> list[BadgeRule]:
-    """バッジの判定ルール（強い順）。
-
-    ★③：BadgeType から引いて BadgeRule にする。並びは強い順（静寂系 → 大きい音系の順でよい）。
-    """
-    return DEFAULT_RULES
+    """バッジの判定ルール（強い順）。BadgeType が無ければ企画書の値"""
+    rules = [
+        BadgeRule(
+            code=badge_code(bt),
+            name=bt.name,
+            series="loud" if bt.category == BadgeType.Category.LOUD else "quiet",
+            threshold_db=float(bt.threshold_db),
+            seconds=float(bt.required_duration_seconds),
+            at_least=bt.condition_operator == BadgeType.Operator.GTE,
+            badge_type_id=bt.id,
+        )
+        # strength は同じ系統の中での強さ。判定は系統ごとに見るので、まとめて並べてよい
+        for bt in sorted(BadgeType.objects.all(), key=lambda b: b.strength, reverse=True)
+    ]
+    return rules or DEFAULT_RULES
 
 
 def save_measurement(user, m: MeasurementInput, time_band: TimeBandInfo) -> int | None:
     """測定記録を保存して id を返す。バッジにならなかった回も保存する（ヒートマップの材料）。
-
-    ★③：Measurement を作る。マス目番号（cell_x, cell_y）もここで計算する。
-         judge は保存しなくてよい。
-    """
-    return None
+    マス目番号は Measurement.save() が計算する。"""
+    measurement = Measurement.objects.create(
+        user=user,
+        latitude=Decimal(str(m.latitude)),
+        longitude=Decimal(str(m.longitude)),
+        gps_accuracy=Decimal(str(m.gps_accuracy)),
+        avg_db=Decimal(str(m.avg_db)),
+        max_db=Decimal(str(m.max_db)),
+        duration_seconds=max(1, round(m.duration_seconds)),  # 列が整数なので四捨五入（判定は送られた値で済んでいる）
+        time_band_id=time_band.id,
+        measured_at=m.measured_at,
+    )
+    return measurement.id
 
 
 def save_badge(
@@ -100,10 +128,37 @@ def save_badge(
     time_band: TimeBandInfo,
     m: MeasurementInput,
 ) -> SavedBadge:
-    """獲得バッジを保存し、50mルールを当てる。
+    """獲得バッジを保存し、50mルール（③の apply_50m_rule）を当てる。"""
+    if measurement_id is None or rule.badge_type_id is None or time_band.id is None:
+        return SavedBadge(user_badge_id=None, replaced=None)  # DBにルールや時間帯が無い間は保存しない
 
-    ★③：UserBadge を作り、同じ系統・同じ時間帯で半径50m以内の自分のバッジと比べて
-         弱いほうの「マップに表示するか」を False にする。新しいほうが弱ければ新しいほうを False。
-         古いほうを外したときは、そのコードを replaced に入れて返す。
-    """
-    return SavedBadge(user_badge_id=None, replaced=None)
+    measurement = Measurement.objects.get(pk=measurement_id)
+    badge_type = BadgeType.objects.get(pk=rule.badge_type_id)
+
+    # 50mルールで「上書き」されたバッジを返すため、適用前に見えていたものを覚えておく
+    visible_before = set(
+        UserBadge.objects.filter(
+            user=user,
+            time_band_id=time_band.id,
+            badge_type__category=badge_type.category,
+            show_on_map=True,
+        ).values_list("pk", flat=True)
+    )
+
+    user_badge = UserBadge.objects.create(
+        user=user,
+        badge_type=badge_type,
+        time_band_id=time_band.id,
+        measurement=measurement,
+        acquired_at=measurement.measured_at,
+    )
+    apply_50m_rule(user_badge)
+
+    replaced = None
+    if user_badge.show_on_map and visible_before:
+        hidden = list(
+            UserBadge.objects.filter(pk__in=visible_before, show_on_map=False).select_related("badge_type")
+        )
+        if hidden:
+            replaced = badge_code(max(hidden, key=lambda b: b.badge_type.strength).badge_type)
+    return SavedBadge(user_badge_id=user_badge.id, replaced=replaced)
