@@ -67,6 +67,10 @@
     bars.push(bar);
   }
 
+  // ゲージの中の砂の板。今の音の形に合わせて砂が動く（badge.js の plate）。測定中だけ動かす
+  const sand = Badge.plate();
+  document.querySelector(".gauge__well").prepend(sand.el);
+
   // いまの区間の最大値と、波形を足すタイミング
   let segMax = -Infinity;
   let lastElapsed = 0;
@@ -151,6 +155,8 @@
     pill.dataset.state = state;
     if (STATE_TEXT[state]) pill.textContent = STATE_TEXT[state];
     $("survey-resume").hidden = state !== "interrupted";
+    if (state === "measuring") sand.start();
+    else sand.stop(); // 一時停止中・中断中などは砂も止める（電池のため）
     if (!running) {
       $("guide").hidden = true;
       $("warning").hidden = true;
@@ -160,6 +166,7 @@
   survey.on("level", (e) => {
     const d = e.detail;
     const now = Number.isFinite(d.level) ? d.level : d.db;
+    sand.setSpectrum(d.spectrum);
 
     // 区間が切り替わったら（経過秒数が戻る・判定が変わる）最大値を数え直す
     if (d.elapsed < lastElapsed || d.mode !== lastMode) segMax = -Infinity;

@@ -37,13 +37,14 @@
 
    ▼ イベント一覧（e.detail の中身）
      state        { state }  idle / starting / measuring / paused / interrupted / stopped
-     level        { db, level, mode, elapsed, target, segmentLeq, guide }   100msごと
+     level        { db, level, mode, elapsed, target, segmentLeq, guide, spectrum }   100msごと
                     db         … いまの値（100ms）
                     level      … 今の音量（直近1秒のLeq）。大きく表示するならこちら
                     mode       … "normal"（通常）/ "loud"（大きい音を判定中）/ "quiet"（静寂を判定中）/ "deep"（深い静寂を判定中）
                     elapsed / target … いまの区間の経過秒数 / 長さ（通常10、大きい音10、静寂15、深い静寂15）
                     segmentLeq … いまの区間のLeq
                     guide      … true のとき「音の発生源に近づいてみよう」を出す
+                    spectrum   … 今の音の形（直近1秒。0〜1 が16個）。調査画面の砂の板に使う。取れなければ null
      judge-start  { mode, target }     判定を始めた
      judge-cancel { mode, elapsed }    音量が通常に戻ったので判定を取り消した
      warning      { db }               85dB以上が続いている（耳を守る案内。10秒に1回まで）
@@ -271,6 +272,7 @@
       this.sessionCount = 0;
       this.lastWarningAt = 0;
       this.recent = []; // 「今の音量」用の直近の値
+      this.recentSpec = []; // 「今の音の形」用の直近の帯ごとの強さ
       this.seg = null; // いまの区間
       this.lastAt = 0;
       this.deadMs = 0; // マイクから音が届いていない時間
@@ -342,6 +344,7 @@
     /** 通常の測定から始める（止まっていた間の音は分からないので、今の音量も数え直し） */
     _run() {
       this.recent = [];
+      this.recentSpec = [];
       this.deadMs = 0;
       this.deadWarned = false;
       this._openSegment("normal");
@@ -447,6 +450,13 @@
       const windowSize = Math.max(1, Math.round(CONFIG.levelWindowMs / CONFIG.tickMs));
       this.recent.push(L);
       if (this.recent.length > windowSize) this.recent.shift();
+      // 今の音の形（直近1秒）。調査画面の砂の板を動かす
+      if (spec) {
+        this.recentSpec.push(spec);
+        if (this.recentSpec.length > windowSize) this.recentSpec.shift();
+      }
+      const specSum = new Array(CONFIG.spectrumBands).fill(0);
+      for (const sp of this.recentSpec) for (let b = 0; b < sp.length; b++) specSum[b] += sp[b];
       const level = leq(this.recent.reduce((a, v) => a + energy(v), 0), this.recent.length);
       const levelReady = this.recent.length >= windowSize;
 
@@ -470,6 +480,7 @@
         target: s.target,
         segmentLeq: round1(leq(s.sumE, s.n)),
         guide,
+        spectrum: spectrumShape(specSum, this.recentSpec.length),
       });
 
       if (s.mode === "normal") {
