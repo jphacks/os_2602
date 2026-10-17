@@ -1,15 +1,17 @@
 {% extends "base.html" %}
 {% comment %}
-  mypage.html = マイページ（リーダーの「一新した」デザイン）。
+  mypage.html = マイページ。
 
   上から順に：
     あなたの記録（見えないアカウントなので名前は出さない）
-    3つの数字（集めたバッジの個数・季節タグ・調査回数）
-    集めたバッジ（すべて／時間帯で絞り込む。取ったものだけを個数と棒グラフで出す）
-    季節タグ図鑑（自分の測定に付けたことのある季節タグが登録済み）
+    3つの数字（集めたバッジの個数・音の図鑑・調査回数）
+    dBバッジ（5種類 × 時間帯の枠を全部並べる。すべて／時間帯で絞り込む）
+    音の図鑑（共通タグも季節タグも混ぜて番号順。まだ出会っていないものは「？？？」とヒント）
+    図鑑のシート（カードを押すと開く。説明と、これまでの標本＝音の模様入りのバッジが並ぶ）
 
-  バッジの見た目はリーダーの部品（templates/components/badge.html と static/css/badge.css）。
-  絞り込みは static/js/mypage.js。中身を作っているのは main/views.py の mypage()。
+  バッジの見た目はリーダーの部品（templates/components/badge.html と static/js/badge.js）。
+  音の模様（音の標本）は JS でしか描けないので、mypage.js がカードのメダルを描き直す。
+  中身を作っているのは main/views.py の mypage()。シートの中身は zukan_data（下の json_script）。
 {% endcomment %}
 {% load static %}
 
@@ -40,8 +42,8 @@
       <dd class="num">{{ badge_total }}<small>個</small></dd>
     </div>
     <div class="summary__item">
-      <dt>季節タグ</dt>
-      <dd class="num">{{ seasonal_collected }}<small>/{{ seasonal|length }}</small></dd>
+      <dt>音の図鑑</dt>
+      <dd class="num">{{ tag_collected }}<small>/{{ tag_cards|length }}</small></dd>
     </div>
     <div class="summary__item">
       <dt>調査回数</dt>
@@ -49,7 +51,7 @@
     </div>
   </dl>
 
-  {# ===== 集めたバッジ ===== #}
+  {# ===== dBバッジ ===== #}
   <section class="d-card mypage-section">
     <div class="mypage-section__head">
       <h2 class="mypage-section__title">集めたバッジ</h2>
@@ -65,49 +67,94 @@
     </div>
     {% endif %}
 
-    <ul id="badge-list" class="badge-list">
-      {% for row in badge_rows %}
-      <li class="badge-list__row" data-band="{{ row.band.id }}" data-count="{{ row.count }}">
-        {% include "components/badge.html" with code=row.code size="md" %}
-        <div class="badge-list__body">
-          <p class="badge-list__name">
-            {{ row.label }}
-            <span class="chip">{{ row.band.name }}</span>
-            {% if row.rare %}<span class="chip chip--rare">レア</span>{% endif %}
-          </p>
-          <span class="badge-list__bar" aria-hidden="true"><span style="width: {{ row.percent }}%"></span></span>
-        </div>
-        <span class="badge-list__count num">{{ row.count }}<small>個</small></span>
+    <ul id="badge-list" class="zukan">
+      {% for card in badge_cards %}
+      <li class="badge-card" data-band="{{ card.band.id }}" data-count="{{ card.count }}">
+        <button class="zukan__item{% if card.count %} zukan__item--collected{% endif %}" type="button" data-key="{{ card.key }}">
+          <span class="zukan__medal" data-medal="{{ card.key }}">
+            {% if card.count %}
+            {% include "components/badge.html" with code=card.code size="md" %}
+            {% else %}
+            {% include "components/badge.html" with code=card.code size="md" locked=True %}
+            {% endif %}
+          </span>
+          <span class="zukan__text">
+            <span class="zukan__name">{{ card.label }}</span>
+            <span class="zukan__period">
+              <span class="chip">{{ card.band.name }}</span>
+              {% if card.rare %}<span class="chip chip--rare">レア！</span>{% endif %}
+              {% if not card.count %}未獲得{% endif %}
+            </span>
+          </span>
+          {% if card.count %}<span class="zukan__count num" aria-label="{{ card.count }}回獲得">×{{ card.count }}</span>{% endif %}
+        </button>
       </li>
       {% endfor %}
     </ul>
-    <p id="badge-empty" class="mypage-empty" {% if badge_rows %}hidden{% endif %}>
-      {% if badge_rows %}この時間帯のバッジはまだありません{% else %}まだバッジがありません。調査してバッジを集めよう{% endif %}
-    </p>
+    <p id="badge-empty" class="mypage-empty" hidden>この時間帯のバッジはありません</p>
   </section>
 
-  {# ===== 季節タグ図鑑 ===== #}
+  {# ===== 音の図鑑 ===== #}
   <section class="d-card mypage-section">
     <div class="mypage-section__head">
-      <h2 class="mypage-section__title">季節タグ図鑑</h2>
-      <span class="mypage-section__note">期間中に選ぶと登録</span>
+      <h2 class="mypage-section__title">音の図鑑</h2>
+      <span class="mypage-section__note">投稿でタグを選ぶと登録</span>
     </div>
     <ul class="zukan">
-      {% for s in seasonal %}
-      <li class="zukan__item{% if s.collected %} zukan__item--collected{% endif %}">
-        <span class="zukan__icon" aria-hidden="true">{% if s.collected %}{{ s.tag.name|slice:":1" }}{% else %}?{% endif %}</span>
-        <span class="zukan__text">
-          <span class="zukan__name">{% if s.collected %}{{ s.tag.name }}{% else %}？？？{% endif %}</span>
-          <span class="zukan__period">{{ s.tag.period_label }}</span>
-        </span>
-        {% if s.now %}<span class="zukan__now">今だけ</span>{% endif %}
+      {% for card in tag_cards %}
+      <li>
+        <button class="zukan__item{% if card.collected %} zukan__item--collected{% endif %}" type="button" data-key="{{ card.key }}">
+          <span class="zukan__no num">No.{{ card.number|stringformat:"03d" }}</span>
+          <span class="zukan__icon" aria-hidden="true">{% if card.collected %}{{ card.icon }}{% else %}?{% endif %}</span>
+          <span class="zukan__text">
+            <span class="zukan__name">{% if card.collected %}{{ card.tag.name }}{% else %}？？？{% endif %}</span>
+            <span class="zukan__period">
+              {% if card.tag.is_rare %}<span class="chip chip--rare">レア！</span>{% endif %}
+              {% if card.collected %}{{ card.tag.period_label }}{% else %}{{ card.tag.hint_text }}{% endif %}
+            </span>
+          </span>
+          {% if card.count %}<span class="zukan__count num" aria-label="{{ card.count }}回出会った">×{{ card.count }}</span>{% endif %}
+          {% if card.now %}<span class="zukan__now">今だけ</span>{% endif %}
+        </button>
       </li>
       {% empty %}
-      <li class="mypage-empty">季節タグはまだ登録されていません</li>
+      <li class="mypage-empty">タグはまだ登録されていません</li>
       {% endfor %}
     </ul>
   </section>
 </div>
+
+{% comment %}
+  ===== 図鑑のシート（カードを押すと開く） =====
+  中身は mypage.js の openZukan() が zukan_data から作る。✕・背景・Esc で閉じる。
+{% endcomment %}
+<div id="zukan-sheet" class="zukan-sheet" hidden>
+  <div class="zukan-sheet__sheet" role="dialog" aria-modal="true" aria-labelledby="zukan-sheet-title">
+    <button id="zukan-sheet-close" class="zukan-sheet__close" type="button" aria-label="閉じる">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6 6 18" />
+      </svg>
+    </button>
+    <div class="zukan-sheet__scroll">
+      <div class="zukan-sheet__hero">
+        <div id="zukan-sheet-visual" class="zukan-sheet__visual"></div>
+        {# 下の標本を押したときだけ、どの標本を出しているかを書く #}
+        <p id="zukan-sheet-picked" class="zukan-sheet__picked num" hidden></p>
+        <p id="zukan-sheet-no" class="zukan-sheet__no num"></p>
+        <h2 id="zukan-sheet-title" class="zukan-sheet__title"></h2>
+        <p id="zukan-sheet-chips" class="zukan-sheet__chips"></p>
+        <p id="zukan-sheet-count" class="zukan-sheet__count"></p>
+      </div>
+      <p id="zukan-sheet-text" class="zukan-sheet__text"></p>
+
+      <h3 class="zukan-sheet__subtitle">集めた標本<small>押すと、上のバッジにその音の模様が出ます</small></h3>
+      <ul id="zukan-sheet-items" class="specimens"></ul>
+      <p id="zukan-sheet-empty" class="mypage-empty" hidden>まだありません。調査して出会いに行こう</p>
+    </div>
+  </div>
+</div>
+
+{{ zukan_data|json_script:"zukan-data" }}
 {% endblock %}
 
 {% block scripts %}

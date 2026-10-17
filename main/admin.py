@@ -40,6 +40,7 @@ class TagAdmin(admin.ModelAdmin):
     list_editable = ["is_active", "sort_order"]
     fieldsets = [
         (None, {"fields": ["name", "icon", "tag_type", "is_active", "sort_order"]}),
+        ("音の図鑑（マイページ）", {"fields": ["hint", "description", "is_rare"]}),
         ("季節タグの期間（毎年くり返す。共通タグは空のまま）", {
             "fields": [
                 ("start_month", "start_day", "start_time"),

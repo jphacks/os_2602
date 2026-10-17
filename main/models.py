@@ -275,6 +275,18 @@ class Tag(models.Model):
         help_text="季節タグ図鑑に出す言葉。空なら開始・終了の月日から自動で作る（例：6月〜8月）",
     )
 
+    # 音の図鑑（マイページ）に出す言葉。まだ出会っていないときはヒント、出会ったら説明を出す
+    hint = models.CharField(
+        "ヒント",
+        max_length=60,
+        blank=True,
+        help_text="まだ出会っていないときに「？？？」の下に出す言葉。空なら期間から自動で作る",
+    )
+    description = models.TextField(
+        "説明", blank=True, help_text="出会ったあとに図鑑で読める説明"
+    )
+    is_rare = models.BooleanField("レア", default=False, help_text="図鑑に「レア！」の印を付ける")
+
     is_active = models.BooleanField("有効", default=True)
     sort_order = models.PositiveIntegerField("表示順", default=0)
 
@@ -307,6 +319,15 @@ class Tag(models.Model):
         if sm == em:
             return f"{sm}月{sd}日〜{ed}日"
         return f"{sm}月{sd}日〜{em}月{ed}日"
+
+    @property
+    def hint_text(self):
+        """図鑑の「？？？」の下に出すヒント。「ヒント」が空なら、季節タグは期間、共通タグは決まり文句"""
+        if self.hint:
+            return self.hint
+        if self.tag_type == self.TagType.SEASONAL:
+            return f"期間限定（{self.period_label}）" if self.period_label else "期間限定"
+        return "いつでも出会える音"
 
     def is_available(self, dt=None):
         """いま（または dt の日時に）選択肢に出してよいか"""

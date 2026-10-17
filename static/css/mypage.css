@@ -1,7 +1,7 @@
 /* ===========================================================================
    mypage.css = マイページ（mypage.html）だけで使う見た目
 
-   構成: 1.あなたの記録 / 2.3つの数字 / 3.各カード / 4.集めたバッジ / 5.季節タグ図鑑
+   構成: 1.あなたの記録 / 2.3つの数字 / 3.各カード / 4.集めたバッジのタブ / 5.カード / 6.図鑑のシート
    ★色は app.css のパレット（var(--d-...)）と、バッジ部品の色（--ink2 など）だけを使う。
    ★バッジ（メダル）そのものの見た目は badge.css。ここには書かない。
    =========================================================================== */
@@ -126,7 +126,7 @@
 }
 
 /* ===========================================================================
-   4. 集めたバッジ
+   4. 集めたバッジ（すべて／昼／夜 のタブ）。カードの形は 5. と同じ
    =========================================================================== */
 
 /* すべて／昼／夜 のタブ。へこんだ溝の中で、選んだものだけふくらませる */
@@ -157,76 +157,14 @@
   font-weight: 700;
 }
 
-.badge-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.badge-list__row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.badge-list__body {
-  flex: 1;
-  min-width: 0;
-}
-.badge-list__name {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 700;
-}
-
-/* 時間帯とレアの小さなラベル（.chip）は app.css。マップのシートでも使う */
-
-/* 個数の棒グラフ（一番多いものが100%） */
-.badge-list__bar {
-  display: block;
-  height: 6px;
-  margin-top: 6px;
-  border-radius: 999px;
-  background: var(--d-track);
-  overflow: hidden;
-}
-.badge-list__bar span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--d-accent);
-}
-
-.badge-list__count {
-  flex: none;
-  min-width: 44px;
-  font-size: 21px;
-  font-weight: 700;
-  text-align: right;
-}
-.badge-list__count small {
-  margin-left: 1px;
-  color: var(--d-muted);
-  font-family: var(--d-font);
-  font-size: 11px;
-  font-weight: 500;
-}
-
 /* ===========================================================================
-   5. 季節タグ図鑑
+   5. カード（集めたバッジ・音の図鑑で共通）
    =========================================================================== */
 .zukan {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 16px 0 0;
+  gap: 14px 12px;
+  margin: 18px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -235,25 +173,41 @@
   margin: 0;
 }
 
-/* まだ集めていないタグ：へこんだ箱 */
+/* まだのもの：へこんだ箱。押すと図鑑のシートが開くのでボタンにしている */
 .zukan__item {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 56px;
-  padding: 8px 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
   border-radius: 18px;
   background: var(--d-bg);
   box-shadow: var(--d-inset);
+  color: var(--d-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-/* 集めたタグ：ふくらんだ箱 */
+/* 集めたもの：ふくらんだ箱 */
 .zukan__item--collected {
   background: var(--d-surface);
-  border: 1px solid var(--d-edge);
+  border-color: var(--d-edge);
   box-shadow: var(--d-raised);
 }
+.zukan__item:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
 
+.zukan__medal {
+  display: flex;
+  flex: none;
+}
+
+/* タグの丸いアイコン */
 .zukan__icon {
   display: grid;
   flex: none;
@@ -274,20 +228,53 @@
 
 .zukan__text {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 .zukan__name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   overflow: hidden;
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .zukan__period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: var(--d-muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+/* 図鑑の番号（左上の小さな数字） */
+.zukan__no {
+  position: absolute;
+  top: 4px;
+  left: 14px;
+  color: var(--ink3);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.zukan__no ~ .zukan__icon,
+.zukan__no ~ .zukan__text {
+  margin-top: 8px;
+}
+
+/* 取った回数（右側の小さな数字） */
+.zukan__count {
+  flex: none;
+  align-self: center;
   color: var(--d-muted);
   font-size: 11px;
+  font-weight: 600;
 }
 
 /* 今の時期だけ選べるタグ */
@@ -301,4 +288,222 @@
   color: var(--d-on-strong);
   font-size: 10.5px;
   font-weight: 700;
+}
+/* ===========================================================================
+   6. 図鑑のシート（カードを押すと開く。調査ページの獲得ポップアップと同じ形）
+   =========================================================================== */
+.zukan-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(36, 59, 53, 0.3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+[data-theme="dark"] .zukan-sheet {
+  background: rgba(10, 20, 17, 0.5);
+}
+
+.zukan-sheet__sheet {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 366px;
+  /* 画面の上下いっぱい。中身は上から詰める */
+  height: 100%;
+  background: var(--d-surface);
+  border: 1px solid var(--d-edge);
+  border-radius: 30px;
+  box-shadow: 0 18px 48px var(--drop);
+  overflow: hidden;
+  animation: zukan-sheet-up 0.28s ease-out both;
+}
+@keyframes zukan-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+.zukan-sheet__scroll {
+  width: 100%;
+  padding: 26px 20px 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.zukan-sheet__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.zukan-sheet__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.zukan-sheet__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.zukan-sheet__visual {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+/* タグの大きなアイコン */
+.zukan-sheet__icon {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--d-accent-soft);
+  box-shadow: var(--d-raised);
+  color: var(--d-on-accent-soft);
+  font-size: 38px;
+  font-weight: 700;
+}
+.zukan-sheet__icon--locked {
+  border: 2px dashed var(--ink3);
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  color: var(--ink3);
+}
+/* 選んだ標本の日時と dB */
+.zukan-sheet__picked {
+  margin: -4px 0 8px;
+  color: var(--d-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.zukan-sheet__no {
+  margin: 0;
+  color: var(--ink3);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.zukan-sheet__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+.zukan-sheet__chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin: 6px 0 0;
+}
+.zukan-sheet__chips:empty {
+  display: none;
+}
+.zukan-sheet__count {
+  margin: 6px 0 0;
+  color: var(--ink2);
+  font-size: 12px;
+}
+
+.zukan-sheet__text {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.zukan-sheet__text--hint {
+  color: var(--ink2);
+}
+
+.zukan-sheet__subtitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 22px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.zukan-sheet__subtitle small {
+  color: var(--ink2);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+/* 集めた標本（模様入りのメダルを並べる） */
+.specimens {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px 4px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* 押せる標本。選んでいるものは、ふくらんだ箱で囲む */
+.specimen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--d-text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.specimen[aria-pressed="true"] {
+  border-color: var(--d-edge);
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+}
+.specimen:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
+.specimen .medal {
+  margin-bottom: 3px;
+}
+.specimen__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 3px;
+  border-radius: 50%;
+  background: var(--d-accent-soft);
+  color: var(--d-on-accent-soft);
+  font-size: 18px;
+  font-weight: 700;
+}
+.specimen__db {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.specimen__at {
+  color: var(--ink2);
+  font-size: 9.5px;
 }

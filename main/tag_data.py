@@ -18,13 +18,16 @@
 # 季節タグ（毎年決まった期間だけ選べる）は、さらに次を書く
 #   start / end … (月, 日, "時:分")。時刻を省くなら (月, 日)
 #   period      … 季節タグ図鑑に出す期間の言葉（省くと月日から自動で作る）
+# どちらのタグにも書ける（省いてよい）。マイページの「音の図鑑」に出る
+#   hint … まだ出会っていないときのヒント（省くと期間から自動で作る）
+#   description … 出会ったあとに読める説明 / rare … True で「レア！」の印
 TAGS = [
     {"name": "セミ", "icon": "蝉", "start": (6, 1, "00:00"), "end": (11, 1, "00:00"), "period": "季節"},
     {"name": "鉄道", "icon": "鉄"},
     {"name": "祭り", "icon": "祭", "start": (1, 1, "00:00"), "end": (12, 31, "00:00"), "period": "季節"},
     {"name": "交通", "icon": "交"},
     {"name": "暗騒", "icon": "暗"},
-    {"name": "音楽フェス", "icon": "音", "start": (1, 1, "00:00"), "end": (12, 31, "00:00"), "period": "季節"}
+    {"name": "音楽フェス", "icon": "♬", "start": (1, 1, "00:00"), "end": (12, 31, "00:00"), "period": "季節"}
 ]
 
 
@@ -60,5 +63,8 @@ def sync_tags(sender, apps, **kwargs):
                 "end_time": et,
                 "period_text": t.get("period", ""),
                 "sort_order": t.get("order", 0),
+                "hint": t.get("hint", ""),
+                "description": t.get("description", ""),
+                "is_rare": t.get("rare", False),
             },
         )
