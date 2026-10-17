@@ -1,0 +1,599 @@
+/* ===========================================================================
+   survey.css = 調査ページ（index.html）だけで使う見た目
+
+   構成: 1.調査する前 / 2.調査中 / 3.バッジ獲得のポップアップ
+   ★色は app.css のパレット（var(--d-...)）だけを使う。
+   =========================================================================== */
+
+.survey {
+  /* 調査ボタンとゲージの大きさ。狭いスマホでは画面幅に合わせて小さくなる */
+  --dial: min(245px, 66vw);
+  padding-top: 8px;
+}
+
+/* ===========================================================================
+   1. 調査する前
+   =========================================================================== */
+.survey-start {
+  display: grid;
+  place-items: center;
+  width: var(--dial);
+  height: var(--dial);
+  margin: 40px auto 0;
+  border-radius: 50%;
+  background: var(--d-bg);
+  box-shadow: var(--d-raised-lg);
+}
+
+.survey-start__well {
+  display: grid;
+  place-items: center;
+  width: 86.5%;
+  height: 86.5%;
+  border-radius: 50%;
+  box-shadow: var(--d-inset);
+}
+
+.survey-start__button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 83%;
+  height: 83%;
+  border: 0;
+  border-radius: 50%;
+  background: var(--d-strong);
+  color: var(--d-on-strong);
+  font: 700 23px var(--d-font);
+  letter-spacing: 0.08em;
+  box-shadow: 6px 8px 18px var(--d-shadow-dark);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.survey-start__button:active {
+  transform: scale(0.96);
+}
+.survey-start__button svg {
+  width: 34px;
+  height: 34px;
+}
+
+.survey-privacy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 30px 0 0;
+  color: var(--d-muted);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+}
+.survey-privacy svg {
+  width: 16px;
+  height: 16px;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 56px 2px 14px;
+}
+.section-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.recent-card {
+  padding: 0 18px;
+}
+
+.recent {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent__row {
+  display: grid;
+  grid-template-columns: 76px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--d-divider);
+}
+.recent__row:last-child {
+  border-bottom: 0;
+}
+
+.recent__db {
+  font-size: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.recent__db small {
+  margin-left: 2px;
+  color: var(--d-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.recent__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.recent__title {
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent__meta {
+  margin-top: 2px;
+  color: var(--d-muted);
+  font-size: 11.5px;
+}
+
+.recent__empty {
+  margin: 0;
+  padding: 22px 0;
+  color: var(--d-muted);
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+/* ===========================================================================
+   2. 調査中
+   =========================================================================== */
+.live-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px;
+  background: var(--d-surface);
+  border: 1px solid var(--d-edge);
+  border-radius: 999px;
+  box-shadow: var(--d-raised);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.live-pill::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--d-accent);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+/* 判定中は点の色で知らせる */
+.live-pill[data-mode="loud"]::before {
+  background: var(--d-very-loud);
+}
+/* 準備中・一時停止中・中断中は点を止める */
+.live-pill:not([data-state="measuring"])::before {
+  background: var(--d-muted);
+  animation: none;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-progress {
+  color: var(--d-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* --- 推定dBのゲージ --- */
+.gauge {
+  display: grid;
+  place-items: center;
+  width: var(--dial);
+  height: var(--dial);
+  margin: 28px auto 0;
+  border-radius: 50%;
+  background: var(--d-bg);
+  box-shadow: var(--d-raised-lg);
+}
+
+.gauge__well {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 86.5%;
+  height: 86.5%;
+  border-radius: 50%;
+  box-shadow: var(--d-inset);
+}
+
+.gauge svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* 線の始まりを真上（12時）にする */
+  transform: rotate(-90deg);
+}
+.gauge svg circle {
+  fill: none;
+  stroke-width: 7;
+}
+.gauge__track {
+  stroke: var(--d-track);
+}
+.gauge__bar {
+  stroke: var(--d-accent);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.gauge__center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gauge__label {
+  color: var(--d-muted);
+  font-size: 11.5px;
+}
+.gauge__value {
+  margin-top: 4px;
+  font-size: calc(var(--dial) * 0.24);
+  font-weight: 700;
+  line-height: 1;
+}
+.gauge__unit {
+  margin-top: 4px;
+  color: var(--d-muted);
+  font-size: 13px;
+}
+
+/* 音量の目安（静か〜かなり）。色は data-tone で変える */
+.gauge__chip {
+  margin-top: 10px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: var(--d-accent);
+  color: var(--d-on-alert);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.gauge__chip[data-tone="normal"] {
+  background: var(--d-accent-soft);
+  color: var(--d-on-accent-soft);
+}
+.gauge__chip[data-tone="loud"] {
+  background: var(--d-loud);
+}
+.gauge__chip[data-tone="very-loud"] {
+  background: var(--d-very-loud);
+}
+
+/* --- 平均と最大 --- */
+.live-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+}
+.stat__label {
+  color: var(--d-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.stat__value {
+  margin-top: 2px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.stat__value small {
+  color: var(--d-muted);
+  font-size: 11px;
+}
+
+/* --- 波形（直近10秒の音量） --- */
+.wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 64px;
+  margin-top: 16px;
+  padding: 16px 14px;
+}
+.wave span {
+  flex: 1;
+  min-height: 4px;
+  border-radius: 3px;
+  background: var(--d-accent-soft);
+  transition: height 0.2s ease;
+}
+.wave span[data-tone="quiet"],
+.wave span[data-tone="calm"] {
+  background: var(--d-accent);
+}
+.wave span[data-tone="loud"] {
+  background: var(--d-loud);
+}
+.wave span[data-tone="very-loud"] {
+  background: var(--d-very-loud);
+}
+
+/* --- この調査 --- */
+.session {
+  margin-top: 16px;
+  padding: 16px 18px 14px;
+}
+.session__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.session__label {
+  font-size: 13px;
+  font-weight: 700;
+}
+.session__count {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+.session__count b {
+  margin-right: 2px;
+  font-size: 20px;
+}
+.session__line {
+  margin: 12px 0 10px;
+  border: 0;
+  border-top: 1px solid var(--d-divider);
+}
+.session__last {
+  margin: 0;
+  color: var(--d-muted);
+  font-size: 12.5px;
+}
+
+/* --- 案内（発生源・85dB） --- */
+.notice {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: start;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px 18px;
+}
+.notice__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--d-bg);
+  box-shadow: 3px 3px 7px var(--d-shadow-dark), -3px -3px 7px var(--d-shadow-light);
+  color: var(--d-accent);
+}
+.notice__icon svg {
+  width: 22px;
+  height: 22px;
+}
+.notice h3 {
+  margin: 2px 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.notice p {
+  margin: 0;
+  color: var(--d-muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.notice--warning .notice__icon {
+  color: var(--d-very-loud);
+}
+
+.live-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+/* --- エラー --- */
+.survey-error {
+  margin: 20px 0 0;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--d-very-loud) 16%, var(--d-surface));
+  color: var(--d-text);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* ===========================================================================
+   3. バッジ獲得のポップアップ
+   リーダーの badge-preview.html（.scrim / .sheet / .stats / .primary）と同じ値。
+   画面の下から出るシート。下のタブより手前に出す（z-index）。
+   =========================================================================== */
+.badge-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(36, 59, 53, 0.3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+[data-theme="dark"] .badge-popup {
+  background: rgba(10, 20, 17, 0.5);
+}
+
+.badge-popup__sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 366px;
+  padding: 16px 20px 20px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid var(--d-edge);
+  border-radius: 30px;
+  box-shadow: 0 18px 48px var(--drop);
+  animation: sheet-up 0.28s ease-out both;
+}
+
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.badge-popup__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.badge-popup__paused {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink2);
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-popup__paused svg {
+  width: 12px;
+  height: 12px;
+}
+.badge-popup__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.badge-popup__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.badge-popup__medal {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.badge-popup__text {
+  text-align: center;
+}
+.badge-popup__kicker {
+  margin: 0;
+  color: var(--d-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.badge-popup__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.badge-popup__note {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 平均・最大・時間帯（へこんだ箱） */
+.badge-popup__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+}
+.badge-popup__stats > div {
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  text-align: center;
+}
+.badge-popup__stats dt {
+  color: var(--ink2);
+  font-size: 11px;
+}
+.badge-popup__stats dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.badge-popup__stats dd small {
+  color: var(--ink2);
+  font-size: 11px;
+}
+#badge-popup-band {
+  font-weight: 700;
+}
+
+.badge-popup__primary {
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--d-strong);
+  color: var(--d-on-strong);
+  font: 700 16px var(--d-font);
+  box-shadow: var(--d-raised);
+  cursor: pointer;
+}
+
+.badge-popup__hint {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 11px;
+}

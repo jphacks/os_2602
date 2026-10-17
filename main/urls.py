@@ -26,7 +26,8 @@ urlpatterns = [
     # --- 画面を返すURL ---
     #
     # ★ここから書きはじめる(コメントを外す)
-    # path("", views.index, name="index"),
+    path("", views.index, name="index"),
+    path("mypage/", views.mypage, name="mypage"),
     path("health", views.health, name="health"),
 
     #↓これは後で消す予定のはずです

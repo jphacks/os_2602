@@ -41,7 +41,11 @@ class TagAdmin(admin.ModelAdmin):
     fieldsets = [
         (None, {"fields": ["name", "icon", "tag_type", "is_active", "sort_order"]}),
         ("季節タグの期間（毎年くり返す。共通タグは空のまま）", {
-            "fields": [("start_month", "start_day", "start_time"), ("end_month", "end_day", "end_time")],
+            "fields": [
+                ("start_month", "start_day", "start_time"),
+                ("end_month", "end_day", "end_time"),
+                "period_text",
+            ],
         }),
     ]
 

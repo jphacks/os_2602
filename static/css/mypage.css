@@ -1,0 +1,320 @@
+/* ===========================================================================
+   mypage.css = マイページ（mypage.html）だけで使う見た目
+
+   構成: 1.あなたの記録 / 2.3つの数字 / 3.各カード / 4.集めたバッジ / 5.季節タグ図鑑
+   ★色は app.css のパレット（var(--d-...)）と、バッジ部品の色（--ink2 など）だけを使う。
+   ★バッジ（メダル）そのものの見た目は badge.css。ここには書かない。
+   =========================================================================== */
+
+.mypage {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 8px;
+}
+
+/* ===========================================================================
+   1. あなたの記録
+   =========================================================================== */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.profile__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--d-bg);
+  box-shadow: var(--d-raised);
+  color: var(--d-accent);
+}
+.profile__avatar svg {
+  width: 26px;
+  height: 26px;
+}
+
+.profile__name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+.profile__sub {
+  margin: 2px 0 0;
+  color: var(--d-muted);
+  font-size: 12px;
+}
+
+/* ===========================================================================
+   2. 3つの数字
+   =========================================================================== */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.summary__item {
+  display: flex;
+  /* HTMLは dt（名前）→ dd（数字）の順。見た目は数字を上にする */
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 76px;
+  padding: 10px 6px;
+  background: var(--d-surface);
+  border: 1px solid var(--d-edge);
+  border-radius: 20px;
+  box-shadow: var(--d-raised);
+}
+.summary__item dd {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.summary__item dd small {
+  margin-left: 1px;
+  color: var(--d-muted);
+  font-family: var(--d-font);
+  font-size: 11px;
+  font-weight: 500;
+}
+.summary__item dt {
+  color: var(--d-muted);
+  font-size: 11.5px;
+}
+
+/* ===========================================================================
+   3. 各カード
+   =========================================================================== */
+.mypage-section {
+  padding: 18px 18px 20px;
+}
+
+.mypage-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mypage-section__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.mypage-section__note {
+  color: var(--d-muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.mypage-empty {
+  margin: 14px 0 0;
+  color: var(--d-muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+/* ===========================================================================
+   4. 集めたバッジ
+   =========================================================================== */
+
+/* すべて／昼／夜 のタブ。へこんだ溝の中で、選んだものだけふくらませる */
+.band-tabs {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+}
+.band-tabs__tab {
+  min-height: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--d-muted);
+  font: 500 13px var(--d-font);
+  cursor: pointer;
+}
+.band-tabs__tab[aria-selected="true"] {
+  background: var(--d-surface);
+  box-shadow: 3px 3px 7px var(--d-shadow-dark), -3px -3px 7px var(--d-shadow-light);
+  color: var(--d-text);
+  font-weight: 700;
+}
+
+.badge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge-list__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge-list__body {
+  flex: 1;
+  min-width: 0;
+}
+.badge-list__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+/* 時間帯とレアの小さなラベル */
+.chip {
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink2);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.chip--rare {
+  border-color: var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+/* 個数の棒グラフ（一番多いものが100%） */
+.badge-list__bar {
+  display: block;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--d-track);
+  overflow: hidden;
+}
+.badge-list__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--d-accent);
+}
+
+.badge-list__count {
+  flex: none;
+  min-width: 44px;
+  font-size: 21px;
+  font-weight: 700;
+  text-align: right;
+}
+.badge-list__count small {
+  margin-left: 1px;
+  color: var(--d-muted);
+  font-family: var(--d-font);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ===========================================================================
+   5. 季節タグ図鑑
+   =========================================================================== */
+.zukan {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.zukan .mypage-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/* まだ集めていないタグ：へこんだ箱 */
+.zukan__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+}
+/* 集めたタグ：ふくらんだ箱 */
+.zukan__item--collected {
+  background: var(--d-surface);
+  border: 1px solid var(--d-edge);
+  box-shadow: var(--d-raised);
+}
+
+.zukan__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px dashed var(--ink3);
+  border-radius: 50%;
+  color: var(--ink3);
+  font-size: 15px;
+  font-weight: 700;
+}
+.zukan__item--collected .zukan__icon {
+  border: 0;
+  background: var(--d-accent-soft);
+  color: var(--d-on-accent-soft);
+}
+
+.zukan__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.zukan__name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.zukan__period {
+  color: var(--d-muted);
+  font-size: 11px;
+}
+
+/* 今の時期だけ選べるタグ */
+.zukan__now {
+  position: absolute;
+  top: -9px;
+  right: 14px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--d-strong);
+  color: var(--d-on-strong);
+  font-size: 10.5px;
+  font-weight: 700;
+}

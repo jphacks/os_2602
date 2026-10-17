@@ -1,0 +1,215 @@
+/* ==========================================================================
+   dether バッジ（メダル）部品  static/css/badge.css
+   --------------------------------------------------------------------------
+   フロントプロトタイプ（Main.dc.html）の .medal / .pin / .pin-count をそのまま
+   切り出したもの。色・影・縁・面・内側の線はモックと同一。
+
+   フォント（base.html の <head> に入れる）:
+     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&text=%E9%9D%99%E6%B7%B1&display=swap" rel="stylesheet">
+     ↑ 2行目は「静」「深」の明朝体。text= で2文字だけ取り寄せるので数KBで済む
+
+   使い方:
+     <span class="medal m-b80 medal--list">80</span>
+
+   種類（モックのコード）:
+     m-b90 = 90dB / m-b80 = 80dB / m-b70 = 70dB / m-q40 = 静寂 / m-q35 = 深い静寂 / m-lock = 未獲得
+   サイズ（モックで使われている寸法）:
+     medal--popup 120px（獲得ポップアップ） / medal--list 48px（マイページ）
+     medal--pin 44px（マップのピン・投稿詳細） / medal--md 34px / medal--sm 32px
+     medal--xs 28px / medal--xxs 26px
+     もしくは style="width:◯px;height:◯px;font-size:◯px" で自由に指定（モックと同じ書き方）
+   ダークモード:
+     祖先の要素（<html> や .app）に data-theme="dark" を付ける（モックと同じ切り替え方）
+   静・深の字体:
+     .medal--kanji を付けると明朝体になる（m-q40 / m-q35 は自動で明朝体。未獲得の m-lock には
+     .medal--kanji を付ける。JS とテンプレートは自動で付ける）
+   獲得演出:
+     .medal--new ＋ 中に <span class="medal__shine"></span> で、ポンと出て光が走る
+   ========================================================================== */
+
+/* ---------- 本体：盛り上がった丸い縁＋一段へこんだ面。大きい音＝明るい面、静寂＝暗い面 ---------- */
+.medal {
+  position: relative;
+  isolation: isolate;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Poppins, 'Zen Maru Gothic', sans-serif;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  color: var(--txt);
+  filter: drop-shadow(0 2px 2.5px rgba(36, 59, 53, 0.32));
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.medal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  border-radius: 50%;
+  background: var(--rim);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.38), inset 0 -2px 0 rgba(36, 59, 53, 0.28);
+}
+.medal::after {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--face);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35),
+    0 -1px 0 rgba(36, 59, 53, 0.25),
+    inset 0 2px 2px rgba(36, 59, 53, 0.22),
+    inset 0 0 0 3px var(--face),
+    inset 0 0 0 4px var(--ln);
+}
+
+/* ---------- 種類 ---------- */
+.m-b90 { --rim: #243B35; --face: #F1E9D2; --ln: #243B35; --txt: #243B35; }
+.m-b80 { --rim: #6B8E7B; --face: #F1E9D2; --ln: #6B8E7B; --txt: #243B35; }
+.m-b70 { --rim: #B7C9B1; --face: #F1E9D2; --ln: #B7C9B1; --txt: #243B35; }
+.m-q40 { --rim: #B7C9B1; --face: #243B35; --ln: #B7C9B1; --txt: #F1E9D2; }
+.m-q35 { --rim: #6B8E7B; --face: #243B35; --ln: #F1E9D2; --txt: #F1E9D2; }
+/* 未獲得：画面の --line / --bg / --ink3 を使う（無いときはモックの値） */
+.m-lock {
+  --rim: var(--line, rgba(36, 59, 53, 0.12));
+  --face: var(--bg, #F1E9D2);
+  --ln: var(--line, rgba(36, 59, 53, 0.12));
+  --txt: var(--ink3, rgba(36, 59, 53, 0.42));
+  filter: none;
+}
+
+/* ---------- 静・深：明朝体（シャープな字体） ---------- */
+.m-q40, .m-q35, .medal--kanji {
+  font-family: 'Noto Serif JP', 'Noto Serif CJK JP', 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'BIZ UDPMincho', serif;
+  font-weight: 700;
+}
+
+/* ---------- ダークモード ---------- */
+[data-theme="dark"] .medal {
+  filter: drop-shadow(0 0 0.8px rgba(241, 233, 210, 0.75)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+[data-theme="dark"] .m-lock {
+  --rim: var(--line, rgba(241, 233, 210, 0.14));
+  --face: var(--bg, #243B35);
+  --ln: var(--line, rgba(241, 233, 210, 0.14));
+  --txt: var(--ink3, rgba(241, 233, 210, 0.4));
+  filter: none;
+}
+
+/* ---------- サイズ（モックの寸法そのまま） ---------- */
+.medal--popup { width: 120px; height: 120px; font-size: 38px; }
+.medal--list  { width: 48px;  height: 48px;  font-size: 17px; }
+.medal--pin   { width: 44px;  height: 44px;  font-size: 15px; }
+.medal--md    { width: 34px;  height: 34px;  font-size: 12px; }
+.medal--sm    { width: 32px;  height: 32px;  font-size: 12px; }
+.medal--xs    { width: 28px;  height: 28px;  font-size: 11px; }
+.medal--xxs   { width: 26px;  height: 26px;  font-size: 10px; }
+
+/* ---------- 獲得演出（ポップアップ用） ---------- */
+.medal--new { animation: medal-pop 620ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+.medal__shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.medal--new .medal__shine::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%);
+  transform: translateX(-130%);
+  animation: medal-shine 1100ms 380ms ease-out both;
+}
+@keyframes medal-pop {
+  0%   { transform: scale(0.4) rotate(-14deg); opacity: 0; }
+  70%  { transform: scale(1.08) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes medal-shine { to { transform: translateX(130%); } }
+@media (prefers-reduced-motion: reduce) {
+  .medal--new, .medal--new .medal__shine::before { animation: none; }
+}
+
+/* ---------- マップのピン ---------- */
+/* モックの .pin から、地図上の絶対配置（position/margin）だけを外したもの。
+   位置は Google Maps の AdvancedMarkerElement が決める。 */
+.pin {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 52px;
+  padding: 4px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+  transition: transform 0.15s;
+}
+.pin[aria-pressed="true"] {
+  background: var(--glass-strong, rgba(247, 242, 226, 0.88));
+  box-shadow: 0 0 0 2px var(--ink, #243B35), 0 6px 14px var(--drop, rgba(36, 59, 53, 0.1));
+  transform: scale(1.12);
+}
+[data-theme="dark"] .pin[aria-pressed="true"] {
+  background: var(--glass-strong, rgba(47, 74, 66, 0.9));
+  box-shadow: 0 0 0 2px var(--ink, #F1E9D2), 0 6px 14px var(--drop, rgba(0, 0, 0, 0.25));
+}
+.pin-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--ink, #243B35);
+  color: var(--bg, #F1E9D2);
+  border: 2px solid var(--bg, #F1E9D2);
+  font-family: Poppins, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-theme="dark"] .pin-count {
+  background: var(--ink, #F1E9D2);
+  color: var(--bg, #243B35);
+  border-color: var(--bg, #243B35);
+}
+@media (prefers-reduced-motion: reduce) { .pin { transition: none; } }
+
+/* ---------- マイページ「バッジ（昼夜10種）」の1行 ---------- */
+/* モックではインラインstyleだったものをクラスにしただけ（値は同じ） */
+.medal-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.medal-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.medal-item__name {
+  font-size: 10px;
+  color: var(--ink2, rgba(36, 59, 53, 0.76));
+  text-align: center;
+  line-height: 1.3;
+}
+[data-theme="dark"] .medal-item__name { color: var(--ink2, rgba(241, 233, 210, 0.78)); }
+.medal-rare {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ink, #243B35);
+  color: var(--bg, #F1E9D2);
+}
+[data-theme="dark"] .medal-rare {
+  background: var(--ink, #F1E9D2);
+  color: var(--bg, #243B35);
+}

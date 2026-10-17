@@ -1,0 +1,17 @@
+{% comment %}
+  dether バッジ（メダル）  サーバー側で描画するとき用
+  ------------------------------------------------------------------
+  使い方:
+    {% include "components/badge.html" with code="b80" size="list" %}
+    {% include "components/badge.html" with code=bt.code size="list" locked=True %}
+
+  code   : "b90" | "b80" | "b70" | "q40" | "q35"
+  size   : "popup" | "list" | "pin" | "md" | "sm" | "xs" | "xxs"（省略時 list）
+  locked : True で未獲得の見た目（文字は残る）
+  is_new : True で獲得演出（ポップアップ用）
+
+  BadgeType から code を出すには、models.py の BadgeType.code を使う（例：row.badge.code）。
+  ★静寂は秒数ではなくしきい値（35dB以下なら q35）で分けている。
+    測定の決まり（measure_store.py）では静寂も深い静寂も15秒なので、秒数では区別できない。
+{% endcomment %}<span class="medal {% if locked %}m-lock{% else %}m-{{ code }}{% endif %} medal--{{ size|default:'list' }}{% if code == 'q40' or code == 'q35' %} medal--kanji{% endif %}{% if is_new %} medal--new{% endif %}" role="img"
+      aria-label="{% if code == 'q40' %}静寂{% elif code == 'q35' %}深い静寂{% else %}{{ code|slice:'1:' }}dB{% endif %}バッジ{% if locked %}（未獲得）{% endif %}">{% if code == 'q40' %}静{% elif code == 'q35' %}深{% else %}{{ code|slice:'1:' }}{% endif %}{% if is_new %}<span class="medal__shine" aria-hidden="true"></span>{% endif %}</span>

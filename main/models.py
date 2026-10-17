@@ -1,3 +1,4 @@
+import calendar
 import math
 from datetime import time
 from decimal import Decimal
@@ -36,6 +37,17 @@ class TimeBand(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def wraps(self):
+        """夜（22:00〜翌6:00）のように日付をまたぐか"""
+        return self.start_time > self.end_time
+
+    @property
+    def code(self):
+        """画面のバッジ部品（badge.js）が使う "d"（昼）/ "n"（夜）。日付をまたぐ時間帯を夜とみなす
+        measure_store.get_time_band の code と同じ値になる（昼 6:00〜22:00 / 夜 22:00〜6:00）"""
+        return "n" if self.wraps else "d"
 
     def contains(self, t):
         """時刻 t がこの時間帯に入るか。夜（22:00〜翌6:00）のような日またぎにも対応"""
@@ -95,6 +107,14 @@ class BadgeType(models.Model):
         if self.category == self.Category.LOUD:
             return (self.threshold_db, self.required_duration_seconds)
         return (self.required_duration_seconds, -self.threshold_db)
+
+    @property
+    def code(self):
+        """画面のバッジ部品（components/badge.html・badge.js）のコード。b90 / b80 / b70 / q40 / q35
+        ★静寂は秒数ではなくしきい値で分ける。測定の決まりでは静寂も深い静寂も15秒で、秒数では区別できない"""
+        if self.category == self.Category.LOUD:
+            return f"b{self.threshold_db:.0f}"
+        return "q35" if self.threshold_db <= 35 else "q40"
 
     @classmethod
     def satisfied_by(cls, avg_db, duration_seconds):
@@ -233,6 +253,13 @@ class Tag(models.Model):
     end_month = models.PositiveSmallIntegerField("終了月", null=True, blank=True)
     end_day = models.PositiveSmallIntegerField("終了日", null=True, blank=True)
     end_time = models.TimeField("終了時刻", null=True, blank=True)
+    # 季節タグ図鑑に出す期間の言葉（例：祭りの時期／12月31日の夜）。空なら月日から自動で作る
+    period_text = models.CharField(
+        "期間の表示",
+        max_length=30,
+        blank=True,
+        help_text="季節タグ図鑑に出す言葉。空なら開始・終了の月日から自動で作る（例：6月〜8月）",
+    )
 
     is_active = models.BooleanField("有効", default=True)
     sort_order = models.PositiveIntegerField("表示順", default=0)
@@ -248,6 +275,24 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def period_label(self):
+        """季節タグ図鑑に出す期間。「期間の表示」があればそれを使い、空なら月日から作る
+        例：6月〜8月（月の初日〜末日）／ 1月1日〜3日（同じ月）／ 12月31日（1日だけ）／ 12月20日〜1月5日"""
+        if self.period_text:
+            return self.period_text
+        if None in (self.start_month, self.start_day, self.end_month, self.end_day):
+            return ""
+        sm, sd, em, ed = self.start_month, self.start_day, self.end_month, self.end_day
+        # 2月29日も末日とみなせるよう、うるう年（2024年）で数える
+        if sd == 1 and ed == calendar.monthrange(2024, em)[1]:
+            return f"{sm}月" if sm == em else f"{sm}月〜{em}月"
+        if (sm, sd) == (em, ed):
+            return f"{sm}月{sd}日"
+        if sm == em:
+            return f"{sm}月{sd}日〜{ed}日"
+        return f"{sm}月{sd}日〜{em}月{ed}日"
 
     def is_available(self, dt=None):
         """いま（または dt の日時に）選択肢に出してよいか"""
