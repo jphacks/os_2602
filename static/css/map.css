@@ -1,26 +1,136 @@
-/* dether マップの見た目。色はここだけで管理する（④が調整） */
+/* ===========================================================================
+   map.css = マップ（map.html）の見た目
+
+   構成: 1.色 / 2.ローカル・全国 / 3.時間帯 / 4.地図のカード / 5.地図の上の部品
+         6.色の見方 / 7.ピンを押すと出るシート
+   ★バッジのピンの見た目はリーダーの部品（static/css/badge.css の .pin / .medal）。ここには書かない。
+   =========================================================================== */
+
+/* ===========================================================================
+   1. 色
+   =========================================================================== */
 :root {
   /* 現在地は Google マップと同じ青。ダーク表示でも同じ（白い縁で地図から浮かせる） */
   --dether-me: #4285f4;
   --dether-me-ring: #ffffff;
-  --dether-surface: #ffffff;
-  --dether-text: #1c1f24;
-  --dether-muted: #5d6673;
+
+  /* ヒートマップ（マスごとの平均dB）。map.js が読んで塗る。下の「色の見方」も同じ色 */
+  --heat-1: #4f7a66; /* 〜40 しずか */
+  --heat-2: #8db39f; /* 40 おだやか */
+  --heat-3: #c9dac4; /* 50 ふつう */
+  --heat-4: #e8d8a4; /* 60 にぎやか */
+  --heat-5: #dca36b; /* 70 うるさい */
+  --heat-6: #c4714f; /* 80 かなり */
+  --heat-7: #973a2e; /* 90〜 耳に注意 */
+  --heat-line: rgba(255, 255, 255, 0.55); /* マスの境目 */
+}
+[data-theme="dark"] {
+  --heat-line: rgba(20, 30, 27, 0.5);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --dether-surface: #1b1f27;
-    --dether-text: #eef1f5;
-    --dether-muted: #a3adbb;
-  }
+/* ===========================================================================
+   2. ローカル（自分）／全国（みんな）
+   =========================================================================== */
+.map-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+}
+
+.scope-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 20px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+}
+.scope-tabs__tab {
+  min-height: 44px;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--d-muted);
+  font: 700 13.5px var(--d-font);
+  cursor: pointer;
+}
+.scope-tabs__tab[aria-selected="true"] {
+  background: var(--d-surface);
+  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
+  color: var(--d-text);
+}
+
+/* ===========================================================================
+   3. 時間帯
+   =========================================================================== */
+.map-band {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.map-band__label {
+  flex: none;
+  width: 72px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.map-band__select {
+  position: relative;
+  flex: 1;
+}
+/* 右の「∨」 */
+.map-band__select::after {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--d-text);
+  border-bottom: 2px solid var(--d-text);
+  content: "";
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+.map-band select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 40px 0 18px;
+  border: 1px solid var(--d-edge);
+  border-radius: 16px;
+  background: var(--d-surface);
+  box-shadow: var(--d-raised);
+  color: var(--d-text);
+  font: 700 13.5px var(--d-font);
+  appearance: none;
+  cursor: pointer;
+}
+
+/* ===========================================================================
+   4. 地図のカード
+   =========================================================================== */
+.map-card {
+  position: relative;
+  padding: 8px;
+  border: 1px solid var(--d-edge);
+  border-radius: 28px;
+  background: var(--d-surface);
+  box-shadow: var(--d-raised);
 }
 
 .dether-map {
   width: 100%;
-  height: 100%;
-  min-height: 320px;
+  /* 画面の高さから、上の操作・色の見方・下のタブの分を引く */
+  height: max(300px, calc(100dvh - 436px));
+  border-radius: 21px;
+  overflow: hidden;
+  background: var(--d-bg); /* 地図が出るまでの色 */
 }
+
+/* ===========================================================================
+   5. 地図の上の部品
+   =========================================================================== */
 
 /* 現在地ピン（Google マップと同じ、白い縁の青い点と広がる波紋）
    AdvancedMarker は中身の「下端の真ん中」を地点に合わせるので、半分下げて点の中心を地点に合わせる */
@@ -56,50 +166,335 @@
   .me-pin__pulse { display: none; }
 }
 
-/* バッジのピンはリーダーの部品（static/css/badge.css の .pin / .medal）を使う */
+/* マスに重ねる代表タグのアイコン（map.js の createTagElement）。マスの真ん中に来るよう半分下げる */
+.heat-tag {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(246, 239, 218, 0.92);
+  box-shadow: 0 1px 3px rgba(36, 59, 53, 0.25);
+  color: #243b35;
+  font: 700 11px var(--d-font);
+  transform: translateY(50%);
+  pointer-events: none;
+}
 
-/* 画面側の部品（デモ用。本番は④のデザインに置き換える） */
-.badge-sheet {
+/* 「タグ」「バッジ」の表示切り替え（右下） */
+.map-layers {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--dether-surface);
-  color: var(--dether-text);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  gap: 8px;
 }
-.badge-sheet[hidden] {
-  display: none;
-}
-.badge-sheet small {
-  color: var(--dether-muted);
-}
-.map-notice {
-  position: absolute;
-  top: calc(12px + env(safe-area-inset-top, 0px));
-  left: 12px;
-  right: 12px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--dether-surface);
-  color: var(--dether-text);
-  font-size: 14px;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
-}
-.map-notice[hidden] {
-  display: none;
-}
-.map-recenter {
-  position: absolute;
-  right: 12px;
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  padding: 10px 14px;
+.map-layers__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px 0 13px;
   border: 0;
   border-radius: 999px;
-  background: var(--dether-surface);
-  color: var(--dether-text);
-  font: 600 14px system-ui, sans-serif;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  background: #243b35;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  color: #f1e9d2;
+  font: 700 13px var(--d-font);
+  cursor: pointer;
+}
+.map-layers__btn svg {
+  width: 16px;
+  height: 16px;
+}
+/* 消しているとき：明るくして、線で消した印 */
+.map-layers__btn[aria-pressed="false"] {
+  background: rgba(246, 239, 218, 0.95);
+  color: #6f7469;
+  text-decoration: line-through;
+}
+
+/* 現在地へ（左下） */
+.map-recenter {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(246, 239, 218, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: #243b35;
+  cursor: pointer;
+}
+.map-recenter svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* バッジが無いときの案内（上） */
+.map-empty {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(246, 239, 218, 0.95);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: #243b35;
+  font-size: 11.5px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* ===========================================================================
+   6. 色の見方
+   =========================================================================== */
+.heat-legend {
+  padding: 14px 16px 12px;
+}
+.heat-legend__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.heat-legend__title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.heat-legend__unit {
+  color: var(--d-muted);
+  font-size: 11px;
+}
+.heat-legend__scale {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.heat-legend__scale li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--d-muted);
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+/* 色の帯 */
+.heat-legend__scale li::before {
+  width: 100%;
+  height: 12px;
+  margin-bottom: 5px;
+  border-radius: 3px;
+  background: var(--c);
+  content: "";
+}
+.heat-legend__scale li:first-child::before {
+  border-radius: 6px 3px 3px 6px;
+}
+.heat-legend__scale li:last-child::before {
+  border-radius: 3px 6px 6px 3px;
+}
+.heat-legend__scale .num {
+  color: var(--d-text);
+  font-size: 10px;
+}
+
+/* ===========================================================================
+   7. ピンを押すと出るシート（調査ページの獲得ポップアップと同じ形）
+   =========================================================================== */
+.spot-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(36, 59, 53, 0.3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+[data-theme="dark"] .spot-sheet {
+  background: rgba(10, 20, 17, 0.5);
+}
+
+.spot-sheet__sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 366px;
+  max-height: min(78dvh, 640px);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid var(--d-edge);
+  border-radius: 30px;
+  box-shadow: 0 18px 48px var(--drop);
+  overflow: hidden;
+  animation: spot-sheet-up 0.28s ease-out both;
+}
+@keyframes spot-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.spot-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 6px 22px;
+}
+.spot-sheet__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.spot-sheet__count {
+  color: var(--ink2);
+  font-size: 12px;
+}
+.spot-sheet__close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.spot-sheet__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.spot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 4px 16px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+/* 1件分（ふくらんだカード） */
+.spot-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--d-edge);
+  border-radius: 22px;
+  background: var(--d-surface);
+  box-shadow: 3px 3px 10px var(--d-shadow-dark), -3px -3px 10px var(--d-shadow-light);
+}
+.spot-item__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.spot-item__head {
+  flex: 1;
+  min-width: 0;
+}
+.spot-item__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.spot-item__name [data-slot="chips"] {
+  display: inline-flex;
+  gap: 4px;
+}
+.chip--mine {
+  border-color: var(--d-accent);
+  color: var(--d-accent);
+}
+.spot-item__meta {
+  margin: 2px 0 0;
+  color: var(--ink2);
+  font-size: 11px;
+}
+.spot-item__db {
+  flex: none;
+  font-size: 20px;
+  font-weight: 700;
+}
+.spot-item__db small {
+  margin-left: 2px;
+  color: var(--ink2);
+  font-family: var(--d-font);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* 付けたタグ */
+.spot-item__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.spot-item__tags li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 3px;
+  border-radius: 999px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  font-size: 12px;
+  font-weight: 700;
+}
+.spot-item__tag-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--d-accent-soft);
+  color: var(--d-on-accent-soft);
+  font-size: 10.5px;
+}
+
+.spot-item__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap; /* 改行をそのまま出す */
+}
+.spot-item__text--empty {
+  color: var(--ink3);
+  font-size: 12px;
+}
+.spot-item__photo {
+  width: 100%;
+  max-height: 260px;
+  border-radius: 16px;
+  object-fit: cover;
 }

@@ -24,8 +24,8 @@
   const BAR_EVERY = 2; // level（100msごと）を何回受け取るたびに1本足すか。48本 × 200ms ≒ 10秒
   const RECENT_MAX = 3; // 「最近の記録」に出す件数（main/views.py の RECENT_COUNT と同じ）
   const WARNING_MS = 6000; // 85dBの案内を出しておく時間
-  // 投稿ポップアップ（2日目）ができたら true にして、openPost() を書く。それまで投稿ボタンは隠しておく
-  const POST_READY = false;
+  const POST_URL = "/api/posts"; // 投稿の送り先（main/api_posts.py）
+  const MAX_PHOTO_MB = 15; // 写真の大きさの上限（main/api_posts.py の MAX_PHOTO_BYTES と同じ）
 
   const Badge = window.DetherBadge;
   const NAMES = Badge.NAMES;
@@ -75,6 +75,9 @@
   // （survey.sessionCount は送るのに成功した数。位置が取れない・通信の失敗では増えない）
   let roundsDone = 0;
   let warningTimer = null;
+  // 獲得ポップアップに出しているバッジ（投稿シートで使う）と、「最近の記録」に足したその行
+  let popupBadge = null;
+  let popupRow = null;
 
   /* ---------- ボタン（★survey の操作は必ずボタンの処理の中で呼ぶ。iPhoneの決まり） ---------- */
   $("survey-start").addEventListener("click", () => {
@@ -90,7 +93,25 @@
     if (e.target === e.currentTarget) closePopupAndResume(); // シートの外（背景）を押したとき
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !$("badge-popup").hidden) closePopupAndResume();
+    if (e.key !== "Escape") return;
+    if (!$("post-sheet").hidden) backToPopup(); // 投稿シートなら、獲得ポップアップに戻るだけ
+    else if (!$("badge-popup").hidden) closePopupAndResume();
+  });
+
+  // 投稿シート。★背景を押しても閉じない（書きかけの内容が消えないように）
+  $("badge-popup-post").addEventListener("click", openPost);
+  $("post-back").addEventListener("click", backToPopup);
+  $("post-form").addEventListener("submit", submitPost);
+  document.querySelectorAll("#post-form .tag-chip").forEach((chipEl) => {
+    chipEl.addEventListener("click", () => {
+      chipEl.setAttribute("aria-pressed", String(chipEl.getAttribute("aria-pressed") !== "true"));
+      $("post-submit").disabled = selectedTagIds().length === 0;
+    });
+  });
+  $("post-photo").addEventListener("change", showPhoto);
+  $("post-photo-remove").addEventListener("click", () => {
+    $("post-photo").value = "";
+    showPhoto();
   });
 
   /* ---------- measure.js からのイベント ---------- */
@@ -164,8 +185,8 @@
   survey.on("badge", (e) => {
     const d = e.detail;
     updateSession(d.result, d.name, d.badge);
-    addRecent(d.result, d.badge, d.timeBand);
-    openPopup(d);
+    const row = addRecent(d.result, d.badge, d.timeBand);
+    openPopup(d, row);
   });
 
   survey.on("error", (e) => showError(e.detail.message));
@@ -231,9 +252,10 @@
     list.prepend(row);
     while (list.children.length > RECENT_MAX) list.lastElementChild.remove();
     $("recent-empty").hidden = true;
+    return row;
   }
 
-  function openPopup(d) {
+  function openPopup(d, row) {
     const band = d.timeBand ? d.timeBand.code : null; // "d"（昼）/ "n"（夜）
     // ★開くたびに作り直す。そうすると獲得の演出（ポンと出て光が走る）が毎回再生される
     $("badge-popup-medal").replaceChildren(Badge.medal(d.badge, "popup", { isNew: true, band }));
@@ -251,7 +273,11 @@
     $("badge-popup-avg").textContent = fmt1(d.result.avgDb);
     $("badge-popup-max").textContent = fmt1(d.result.maxDb);
     $("badge-popup-band").textContent = bandName || "--";
-    $("badge-popup-post").hidden = !POST_READY;
+    // 投稿できるのは、サーバーに保存できたバッジだけ（管理画面にバッジの種類が無いときなどは保存されない）
+    const userBadgeId = d.response && d.response.badge ? d.response.badge.user_badge_id : null;
+    popupBadge = userBadgeId ? { ...d, userBadgeId } : null;
+    popupRow = row;
+    $("badge-popup-post").hidden = !popupBadge;
 
     $("badge-popup").hidden = false;
     $("badge-popup-close").focus();
@@ -261,6 +287,111 @@
   function closePopupAndResume() {
     $("badge-popup").hidden = true;
     survey.resume();
+  }
+
+  /* ---------- 投稿シート ---------- */
+
+  function openPost() {
+    const d = popupBadge;
+    if (!d) return;
+    const band = d.timeBand ? d.timeBand.code : null;
+    $("post-medal").replaceChildren(Badge.medal(d.badge, "list", { band }));
+    $("post-sub").textContent = [d.name, d.timeBand && d.timeBand.name, `${fmt1(d.result.avgDb)} dB`]
+      .filter(Boolean)
+      .join("・");
+
+    // 前に開いたときの入力を消す
+    $("post-form").reset();
+    document.querySelectorAll("#post-form .tag-chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
+    $("post-submit").disabled = true;
+    showPhoto();
+    postError("");
+
+    $("badge-popup").hidden = true;
+    $("post-sheet").hidden = false;
+    $("post-sheet").querySelector(".post-sheet__body").scrollTop = 0;
+    $("post-back").focus();
+  }
+
+  function backToPopup() {
+    $("post-sheet").hidden = true;
+    $("badge-popup").hidden = false;
+    $("badge-popup-post").focus();
+  }
+
+  function selectedTagIds() {
+    return [...document.querySelectorAll('#post-form .tag-chip[aria-pressed="true"]')].map(
+      (c) => c.dataset.tagId
+    );
+  }
+
+  // 選んだ写真を小さく見せる。大きすぎる写真はここで外す
+  let photoUrl = null;
+  function showPhoto() {
+    const file = $("post-photo").files[0];
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    photoUrl = null;
+    if (file && file.size > MAX_PHOTO_MB * 1024 * 1024) {
+      $("post-photo").value = "";
+      postError(`写真が大きすぎます（${MAX_PHOTO_MB}MBまで）`);
+      return showPhoto();
+    }
+    if (file) {
+      photoUrl = URL.createObjectURL(file);
+      $("post-photo-img").src = photoUrl;
+      postError("");
+    }
+    $("post-photo-preview").hidden = !file;
+    $("post-photo-pick").hidden = !!file;
+  }
+
+  function postError(message) {
+    $("post-error").hidden = !message;
+    $("post-error").textContent = message || "";
+  }
+
+  // ★送り終わるのを待たずに、押した瞬間に調査を再開する。
+  //   survey.resume() はボタンの処理の中で呼ばないと、iPhone でマイクが再開しないため。
+  //   送った結果は、画面上のお知らせ（main.js の showMessage）で伝える。
+  function submitPost(e) {
+    e.preventDefault();
+    const d = popupBadge;
+    const tagIds = selectedTagIds();
+    if (!d || !tagIds.length) {
+      postError("何の音だったか、タグを1つ以上選んでください");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("user_badge_id", d.userBadgeId);
+    tagIds.forEach((id) => form.append("tag_ids", id));
+    form.append("description", $("post-description").value.trim());
+    const photo = $("post-photo").files[0];
+    if (photo) form.append("photo", photo);
+
+    // 「最近の記録」の行のタイトルを、選んだタグにする（index() がタグを先に出すのと同じ）
+    const tagNames = [...document.querySelectorAll('#post-form .tag-chip[aria-pressed="true"]')].map(
+      (c) => c.lastChild.textContent.trim()
+    );
+    const row = popupRow;
+
+    popupBadge = null;
+    $("post-sheet").hidden = true;
+    survey.resume();
+
+    fetch(POST_URL, {
+      method: "POST",
+      body: form, // ★Content-Type は書かない（写真を送る形をブラウザが付ける）
+      headers: { Accept: "application/json", "X-CSRFToken": CSRF_TOKEN }, // CSRF_TOKEN は main.js
+      credentials: "same-origin",
+    })
+      .then(handleResponse) // main.js。失敗ならサーバーの文言でエラーにする
+      .then(() => {
+        showMessage("投稿しました。マップに載りました", "success");
+        const title = row && row.querySelector('[data-slot="title"]');
+        if (title) title.textContent = tagNames.join("・");
+      })
+      .catch((err) => showMessage(`投稿できませんでした：${err.message}`, "error"));
   }
 
   function showError(message) {

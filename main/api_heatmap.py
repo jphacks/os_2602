@@ -46,7 +46,8 @@ def level_for_zoom(zoom: int | None) -> str:
 def heatmap(request):
     """見えている範囲のマスごとの平均dBと代表タグを返す。
 
-    GET /api/heatmap?south=..&west=..&north=..&east=..&zoom=17&time_band=1
+    GET /api/heatmap?south=..&west=..&north=..&east=..&zoom=17&time_band=1&mine=1
+    mine=1 なら自分の測定だけ（ローカルマップ）。無ければ全員分（全国マップ）
     """
     try:
         south = _float(request.GET, "south", -90, 90)
@@ -72,6 +73,10 @@ def heatmap(request):
     measurements = Measurement.objects.filter(cell_x__range=(x0, x1), cell_y__range=(y0, y1))
     if time_band is not None:
         measurements = measurements.filter(time_band_id=time_band)
+    if request.GET.get("mine") == "1":
+        # 見えないアカウントがまだ無い人は、自分の測定も無い
+        user_id = request.user.id if request.user.is_authenticated else None
+        measurements = measurements.filter(user_id=user_id)
 
     # --- マスごとの平均dB ---
     cells = (
