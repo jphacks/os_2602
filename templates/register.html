@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% comment %}
+  新規登録画面。login.html との違いは、パスワードを2回入力させることと送り先だけ。
+  ★Django版は {% extends %} が1行目でなければならないので、説明はその下に置く。
+{% endcomment %}
+
+{% block content %}
+
+<section class="auth-panel">
+  <h1>新規登録</h1>
+
+  <form method="post" action="{% url 'accounts:register' %}" class="stacked-form">
+    {% csrf_token %}
+
+    <div class="field">
+      <label for="username">ユーザー名</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        value="{{ username }}"
+        maxlength="150"
+        required
+        autocomplete="username"
+        autofocus
+      />
+      <p class="hint">150文字以内。ログインのときに使います。</p>
+    </div>
+
+    <div class="field">
+      <label for="password">パスワード</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        minlength="8"
+        required
+        autocomplete="new-password"
+      />
+      <p class="hint">8文字以上。よくあるパスワードや数字だけのものは登録できません。</p>
+    </div>
+
+    <div class="field">
+      <label for="password_confirm">パスワード(確認)</label>
+      <input
+        type="password"
+        id="password_confirm"
+        name="password_confirm"
+        minlength="8"
+        required
+        autocomplete="new-password"
+      />
+      <p class="hint">打ち間違い防止のため、もう一度入力してください。</p>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">登録する</button>
+  </form>
+
+  <p class="auth-switch">
+    すでにアカウントがある方は
+    <a href="{% url 'accounts:login' %}">ログイン</a>
+  </p>
+</section>
+
+{% endblock %}

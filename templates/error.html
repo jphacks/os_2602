@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% comment %}
+  error.html = 400 / 403 / 404 / 500 で共通に使うエラーページ。
+
+  出す文言(数字・英語名・日本語の説明)は Python 側から渡している。
+  文言を直したいときも種類を増やしたいときも main/errors.py を見る。
+  このファイルを種類ごとに増やす必要はない。
+
+  ★Django版は {% extends %} が1行目でなければならないので、説明はその下に置く。
+{% endcomment %}
+
+{% block content %}
+
+<section class="error-panel">
+  <p class="error-code">{{ error_code }}</p>
+
+  <h1 class="error-name">{{ error_name }}</h1>
+
+  <p class="error-message">{{ error_message }}</p>
+
+  <a href="/" class="btn btn-primary">トップページへ戻る</a>
+</section>
+
+{% endblock %}

@@ -1,0 +1,17 @@
+{% comment %}
+  robots.txt = 検索エンジンへの案内。
+
+  ★これは「お願い」であって、見せない設定ではない。
+    入られては困るものは必ずログインで守ること。
+  ★検索エンジンはサイト直下しか見に来ないので、config/urls.py で直下に出している。
+    Django版は collectstatic があるため、static/ ではなく templates/ に置いている。
+{% endcomment %}
+User-agent: *
+
+# 管理画面・ログイン画面・JavaScript向けのURLは検索結果に載せる意味がない。
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /api/
+
+# それ以外は載せてよい。
+Allow: /

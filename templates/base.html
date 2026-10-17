@@ -1,0 +1,90 @@
+{% comment %}
+  base.html = 全ページ共通の型紙。ヘッダー・フッター・CSSの読み込みをここにまとめている。
+
+  穴(block)は3つ。各ページは同じ名前の block を書くと、その中身がここに入る。
+    head_extra … そのページ専用のCSS
+    content    … ページの本体(必須)
+    scripts    … そのページ専用のJS
+
+  サイト名・説明文と、検索・SNS向けの値は main/context_processors.py が用意している。
+  ★渡していない値は空になるだけでエラーが出ない。「出ない」ときはまずそこを疑う。
+  ★{{ user }} {{ messages }} {{ SITE_NAME }} は毎回渡さなくても全ページで使える。
+{% endcomment %}
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+
+    <title>{% if title %}{{ title }} | {% endif %}{{ SITE_NAME }}</title>
+
+    {% firstof description SITE_DESCRIPTION as page_description %}
+
+    <meta name="description" content="{{ page_description }}" />
+    <link rel="canonical" href="{{ canonical_url }}" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="{{ SITE_NAME }}" />
+    <meta property="og:title" content="{% if title %}{{ title }} | {% endif %}{{ SITE_NAME }}" />
+    <meta property="og:description" content="{{ page_description }}" />
+    <meta property="og:url" content="{{ canonical_url }}" />
+    <meta property="og:locale" content="ja_JP" />
+
+    {% if OGP_IMAGE %}
+    <meta property="og:image" content="{{ site_url }}{{ OGP_IMAGE }}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    {% endif %}
+
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+
+    {% block head_extra %}{% endblock %}
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="site-title" href="/">{{ SITE_NAME }}</a>
+
+        <nav class="site-nav">
+          {% if AUTH_ENABLED %} {% if user.is_authenticated %}
+          <span class="nav-user">{{ user.username }} さん</span>
+
+          <form action="{% url 'accounts:logout' %}" method="post" class="inline-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost">ログアウト</button>
+          </form>
+          {% else %}
+          <a class="btn btn-ghost" href="{% url 'accounts:login' %}">ログイン</a>
+          <a class="btn btn-primary" href="{% url 'accounts:register' %}">新規登録</a>
+          {% endif %} {% endif %}
+        </nav>
+      </div>
+    </header>
+
+    <div class="container">
+      {% if messages %}
+      <ul class="flash-list">
+        {% for message in messages %}
+        <li class="flash flash-{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+
+    <main class="container">{% block content %}{% endblock %}</main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <small>Team AIB</small>
+      </div>
+    </footer>
+
+    <script src="{% static 'js/main.js' %}"></script>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% comment %}
+  ログイン画面。
+
+  <input name="○○"> の名前が Python 側の request.POST.get("○○") と1対1で対応する。
+  ★ここがズレると値が届かない。
+  ★Django版は {% extends %} が1行目でなければならないので、説明はその下に置く。
+{% endcomment %}
+
+{% block content %}
+
+<section class="auth-panel">
+  <h1>ログイン</h1>
+
+  <form method="post" action="{% url 'accounts:login' %}" class="stacked-form">
+    {% csrf_token %}
+
+    <input type="hidden" name="next" value="{{ next }}" />
+
+    <div class="field">
+      <label for="username">ユーザー名</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        value="{{ username }}"
+        required
+        autocomplete="username"
+        autofocus
+      />
+    </div>
+
+    <div class="field">
+      <label for="password">パスワード</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        required
+        autocomplete="current-password"
+      />
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">ログイン</button>
+  </form>
+
+  <p class="auth-switch">
+    アカウントがまだない方は
+    <a href="{% url 'accounts:register' %}">新規登録</a>
+  </p>
+</section>
+
+{% endblock %}

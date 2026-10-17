@@ -1,0 +1,90 @@
+{
+  // ==========================================================================
+  // チーム共通のエディタ設定
+  //
+  //   ▼ このファイルはGitHubで共有される
+  //     .gitignore で「.vscode/* は除外、ただし settings.json と
+  //     extensions.json だけ ! で例外的に許可」と書いてある。
+  //     launch.json などには個人PCのパスが入るため、
+  //     フォルダごと除外して共有したい2つだけ戻す形にしている。
+  //
+  //   ▼ 揃える目的は好みの統一ではなくGitの差分
+  //     整形が人によって違うと、1文字直しただけで「200行変更」と表示され
+  //     レビューできなくなる。全員同じ整形なら差分がきれいに出る。
+  // ==========================================================================
+
+  // --- 保存時の自動処理 ---
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // ★改行をLFに統一。Windowsの既定はCRLFなので、これが無いと
+  //   WindowsとMacの間で「全行変更された」という差分が出る。
+  "files.eol": "\n",
+
+  // --- Python ---
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+
+  // --- HTML / CSS / JS(VSCode内蔵の整形機能。追加インストール不要) ---
+  // ★同じ言語の設定は1か所にまとめる。"[html]" を2回書くと
+  //   後ろだけが有効になり、前の設定が黙って無効になる(JSONの仕様)。
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "[css]": {
+    "editor.defaultFormatter": "vscode.css-language-features",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "[json]": { "editor.tabSize": 2 },
+  "[jsonc]": { "editor.tabSize": 2 },
+  "[yaml]": { "editor.tabSize": 2 },
+
+  // 上で指定していない言語の既定値(Pythonは4スペース)
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+
+  // --- 見やすさ ---
+  "editor.rulers": [100], // pyproject.toml の line-length と同じ値
+  "editor.renderWhitespace": "boundary",
+
+  // --- 検索から除外(結果がキャッシュで埋まるのを防ぐ) ---
+  "search.exclude": {
+    "**/__pycache__": true,
+    "**/.ruff_cache": true,
+    "**/.venv": true,
+    "**/uv.lock": true
+  },
+
+  // --- templates/ のHTMLで {% %} を正しく色分けする ---
+  // ★django-html にすると {% if %} などが色付きになり、閉じ忘れに気づきやすい。
+  //   拡張機能 batisteo.vscode-django を入れると効く。
+  "files.associations": {
+    "**/templates/**/*.html": "django-html"
+  },
+
+  // ★templates/ の中だけ保存時の自動整形を切っている。
+  //   VSCode内蔵の整形機能は {% if %} を理解できず、
+  //   タグの位置を崩してしまうことがあるため。
+  //   (templates/ の外にある .html は今までどおり自動整形される)
+  "[django-html]": {
+    "editor.formatOnSave": false,
+    "editor.tabSize": 2
+  },
+  "emmet.includeLanguages": {
+    "django-html": "html"
+  }
+}

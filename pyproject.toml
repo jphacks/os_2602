@@ -1,0 +1,55 @@
+[project]
+name = "case-django"
+version = "0.1.0"
+description = "ハッカソン用テンプレート(Django)"
+requires-python = ">=3.13"
+
+# ライブラリを増やすときは、ここに1行足してから
+# docs/SETUP.md の「ライブラリを追加したいとき」を実行する。
+dependencies = [
+    # ★5.2 はLTS(長期サポート版)。
+    #   最新版より解説記事が多く、ハッカソン中に調べ物をするときに困らない。
+    "Django==5.2.17",
+    "mysqlclient",      # PythonとMySQLの通訳(Django公式が推奨するもの)
+    "python-dotenv",    # .env から設定を読み込む
+    "gunicorn",         # 本番用のサーバー(開発中は使わない)
+
+    # ★まだ誰も使っていないのに入っている理由
+    #
+    #   Pillow は画像を扱う部品。Djangoの ImageField(画像を保存する項目)は
+    #   これが無いと動かず、モデルに1行書いた瞬間にアプリ全体が起動しなくなる:
+    #
+    #       ERRORS: Cannot use ImageField because Pillow is not installed.
+    #
+    #   DBの問題でもコードの間違いでもないので、初見だと原因に辿り着けない。
+    #   プロフィール画像や投稿画像は後から欲しくなることがほとんどなので、
+    #   先に入れてある。使わなければ動作に影響はない。
+    "Pillow",
+]
+
+# 開発中だけ使う道具。本番のサーバーには入れない。
+[dependency-groups]
+dev = [
+    "ruff",  # 書き方チェック + 自動整形
+]
+
+# 「配布するライブラリではなく、動かすアプリ」という宣言。
+# これがあると uv が余計なビルドをスキップする。
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+# ★チェック・整形の対象外にするもの
+#   migrations … Djangoが自動生成するファイル(手で直さない)
+#   *.md        … ruffは説明文の中のコード例まで整形してしまい、
+#                 手順書の書き方が勝手に変わってしまうため除外する
+#   .comment_backup … tools/strip_comments.py が取る写し(同じ中身が2つ出て
+#                 エラーも2回表示されるため除外する)
+extend-exclude = ["*/migrations/*", "*.md", "tools/.comment_backup"]
+
+[tool.ruff.lint]
+# E,F=基本的な間違い / I=importの並び順 / UP=古い書き方
+select = ["E", "F", "I", "UP"]

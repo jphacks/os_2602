@@ -1,0 +1,106 @@
+# =============================================================================
+# GitHubに上げないもの
+#   1. 秘密のもの / 2. 各自の環境専用 / 3. 自動で作り直せるもの
+# =============================================================================
+
+# --- 秘密のもの(絶対に上げない) ---
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+# 鍵ファイルは拡張子が無いこともあるので名前でも止める
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json
+
+# --- Pythonの作業ファイル ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- 個人用のメモ ---
+# ★*.local.md はGitHubに上がらない。
+#   AWSのアカウント情報や自分たちのドメインなど、
+#   公開したくない手順を書くときはこの名前にする。
+*.local.md
+
+# --- Django ---
+# 本番用にCSS/JSを1か所へ集めたもの。コマンドで作り直せるので上げない。
+staticfiles/
+# 利用者がアップロードしたファイル(プロフィールアイコンなど)。
+# ★中身は上げないが、フォルダ自体は残す(.gitkeep だけ通す)。
+#   フォルダが無いと、クローンした人の手元で保存先が見つからずエラーになる。
+media/*
+!media/.gitkeep
+# 開発ログ
+*.log
+
+# ★migrations/ は上げること★
+#   「DBの表をどう変えたか」の指示書で、全員のDBを同じ形に保つために必要。
+#   上げ忘れると、他の人の環境で「そんな列は無い」というエラーになる。
+#   (自動生成物に見えるが、Djangoでは設計図と同じ扱い)
+
+# --- 開発ツールのキャッシュ ---
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# tools/strip_comments.py が消す前に取っておく写し。
+# 各自の手元でしか意味がないので上げない。
+tools/.comment_backup/
+
+# --- エディタ / OS ---
+# .vscode は「原則除外 → 共有したい2つだけ ! で戻す」形にしている。
+# launch.json などには個人のパスが入るため、まとめて除外するのが安全。
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Node系(素のJSを使う方針だが、誰かが npm を打った場合の保険) ---
+# node_modules は数万ファイルになる。git add . で吸い込むと復旧が大変。
+node_modules/
+dist/
+build/
+.cache/
+
+# --- 重量物 ---
+# 一度コミットすると履歴から消せず、全員のcloneが重くなる。
+# ★.gitignore はコメントを行の途中に書けない(#以降もファイル名扱いになる)。
+#   説明を書きたいときは必ず行を分ける。
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+*.mp4
+*.mov
+*.avi
+*.psd
+*.ai
+
+# DBのダンプ(数百MBになることがある)。
+# *.sql を全部除外すると、後で置いた schema.sql などが黙って無視されて
+# 原因不明の不具合になるので、ダンプらしい名前だけを止める。
+*.dump
+dump.sql
+*_dump.sql
+backup*.sql
+
+# --- ログや一時ファイル ---
+logs/
+tmp/
+temp/
+*.bak
+*~
+
+# --- DBのデータ本体(Dockerが管理する) ---
+*.sqlite3
+*.db
+mysql_data/

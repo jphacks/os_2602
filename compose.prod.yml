@@ -1,0 +1,192 @@
+# =============================================================================
+# compose.prod.yml = 本番用の段取り表
+#
+#   docker compose -f compose.prod.yml up -d --build     起動
+#   docker compose -f compose.prod.yml logs -f           ログを見る
+#   docker compose -f compose.prod.yml down              停止
+#
+#   ★-f compose.prod.yml を毎回付ける。付け忘れると開発用が起動する。
+#   手順の全体は docs/DEPLOY.md。
+#
+# ▼ 開発用(compose.yml)との違い
+#
+#   | | 開発 | 本番 |
+#   | --- | --- | --- |
+#   | 箱 | dev | **prod** |
+#   | サーバー | runserver(1人ずつ) | **gunicorn(3人同時)** |
+#   | ソースの直結 | あり(保存で即反映) | **無し** |
+#   | 受付 | Django が全部やる | **Nginx が front に立つ** |
+#   | DBのポート | PCから見える(3309) | **開けない** |
+#   | 画像の置き場 | フォルダ | **箱の外の保管庫** |
+#
+#   ★「ソースの直結が無い」がいちばん大事です。
+#     本番は箱の中に焼き込んだコードで動きます。直したら build し直します。
+#     ここに volumes: - .:/app を書くと、焼き込んだものが隠されて起動しません。
+# =============================================================================
+
+# ★プロジェクト名を分ける。同じ名前だと開発用と保管庫(DBのデータ)を共有してしまう。
+name: case_django_prod
+
+services:
+  # ===========================================================================
+  # db = MySQL
+  # ===========================================================================
+  db:
+    image: mysql:8.4
+
+    # always = サーバーを再起動しても自動で戻ってくる。
+    restart: always
+
+    # ▼ ★メモリ1GBのサーバーで動かすための設定
+    #
+    #   MySQL 8 は既定のままだと 800MB 近く使う。1GBの機械(t3.micro など)
+    #   ではメモリが足りなくなり、OSがMySQLを強制終了する。
+    #   症状は「たまに502」だけで、少し待つと勝手に直るため原因に辿り着けない。
+    #   ★2GB以上のサーバーに移したら、この4行は消してよい(その分速くなる)。
+    command: >
+      --performance-schema=OFF
+      --innodb-buffer-pool-size=128M
+      --max-connections=30
+      --table-open-cache=200
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Tokyo
+
+    # ★ports を書いていない(開発用には 3309 があった)。
+    #   本番で開けると世界中からDBにログインを試される。
+    #   DBeaver で見たいときは、ポートではなくSSHのトンネル越しに繋ぐ。
+
+    volumes:
+      - db_data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  # ===========================================================================
+  # web = Django(gunicorn)
+  # ===========================================================================
+  web:
+    build:
+      context: .
+      # ★prod = 組み立て道具を持たない、軽くて安全な箱。
+      target: prod
+
+    restart: always
+
+    env_file:
+      - .env
+
+    environment:
+      DB_HOST: db
+
+    # ★起動時に3つのことを順にやる
+    #
+    #   1. migrate       … DBの表を最新の形に合わせる
+    #   2. collectstatic … CSS・JSを1か所に集める(Nginxが配れるように)
+    #   3. gunicorn      … 本番用のサーバーを起動する
+    #
+    #   ★collectstatic を忘れると、画面は出るのに真っ白(CSSが無い)になります。
+    #     毎回自動で走らせているので、手で打つ必要はありません。
+    #
+    #   --workers 3 = 3人分の窓口。目安は「CPUの数 x 2 + 1」。
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+              python manage.py collectstatic --noinput &&
+              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+
+    # ★ports を書いていません。
+    #   お客さんは必ず Nginx を通ります。Django を直接には触れません。
+
+    volumes:
+      # ★ソースコードは直結しません(本番は箱に焼き込んだものを使う)。
+      #   ここに - .:/app と書くと起動しなくなります。書かないでください。
+      #
+      # collectstatic の集め先。Nginx がここから配る。
+      - static_files:/app/staticfiles
+      # 利用者が上げたファイル(プロフィールアイコン)。
+      # ★箱の外なので、build し直しても消えません。
+      - media_files:/app/media
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ===========================================================================
+  # nginx = 入口の案内係
+  # ===========================================================================
+  nginx:
+    image: nginx:1.27-alpine
+
+    restart: always
+
+    ports:
+      # ★443 はHTTPS化前から開けておいて構わない(中で誰も待っていないだけ)。
+      #   当日に足し忘れると「設定は合っているのに繋がらない」で長く詰まる。
+      # ★80 はHTTPS化した後も閉じないこと。証明書の更新確認がHTTPで来る。
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      # ★HTTPS化したら、この1行を prod-https.conf に書き換える(切り替えはここだけ)。
+      #   証明書を取る前に書き換えないこと。Nginxが起動しなくなる。
+      - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      # HTTP版・HTTPS版の両方から読み込む中身。★どちらでも必要。
+      - ./docker/nginx/app.inc:/etc/nginx/app.inc:ro
+      # web が集めたCSS・JSと、利用者が上げた画像を、Nginxからも見えるようにする。
+      - static_files:/var/www/static:ro
+      - media_files:/var/www/media:ro
+      # 証明書。certbot が書き、Nginx は読むだけ。
+      - certbot_conf:/etc/letsencrypt:ro
+      # 更新確認の受け渡し場所。★:ro を付けないこと(certbot が書き込む)。
+      - certbot_www:/var/www/certbot
+
+    depends_on:
+      - web
+
+  # ===========================================================================
+  # certbot = HTTPSの証明書を取る・更新する係(★普段は動きません)
+  # ===========================================================================
+  #
+  #   profiles が付いているので up では起動しない。呼んだときだけ来る係。
+  #
+  #   取る(★ドメインとメールは自分のものに変える):
+  #       docker compose -f compose.prod.yml run --rm certbot certonly   #         --webroot -w /var/www/certbot   #         -d example.com --email you@example.com --agree-tos --no-eff-email
+  #
+  #   更新:
+  #       docker compose -f compose.prod.yml run --rm certbot renew
+  #
+  #   ★取る前に、HTTP(prod.conf)のまま nginx が起動していること。
+  #   手順の全体は docs/DEPLOY.md の「HTTPSにする」。
+  certbot:
+    image: certbot/certbot:latest
+
+    # ★この1行が「普段は動かない」の指定。消すと up のたびに起動します。
+    profiles:
+      - certbot
+
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+# =============================================================================
+# 箱の外に置く保管庫
+#
+#   ★down -v は本番では絶対に打たないこと(-v が保管庫ごと消す指定)。
+#     media_files を消すと利用者の画像が全部消える。
+#     certbot_conf を消すと証明書が消え、取り直しは「1週間に5回まで」に当たる。
+# =============================================================================
+volumes:
+  db_data:
+  static_files:
+  media_files:
+  certbot_conf:
+  certbot_www:

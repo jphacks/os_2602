@@ -1,0 +1,534 @@
+{% comment %}
+  デモページ(自分たちのプロダクトには含まれません)。
+
+  ★1枚で完結しています。base.html も style.css も main.js も使いません。
+    このページの役目は「セットアップが動いているか」を見せる計器なので、
+    base.html を作り替えた日に一緒に壊れないようにしてあります。
+
+  ★新しいページを作るときの見本は login.html / register.html を見てください。
+  ★消すときは demo/ を削除して、config/settings.py と config/urls.py の「デモ」の数行を消すだけです。
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }} | Django</title>
+
+    <style>
+      /* このページ専用。他のファイルには影響しません。 */
+      :root {
+        --bg: #f7f8fb;
+        --surface: #ffffff;
+        --text: #1f2333;
+        --muted: #6b7280;
+        --border: #e3e6ef;
+        --primary: #0c6b4f;
+        --primary-dark: #094e3a;
+        --primary-soft: #e6f2ed;
+        --ok: #0f8f5f;
+        --ok-soft: #e6f7ef;
+        --ng: #d13b3b;
+        --ng-soft: #fdeded;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #14161f;
+          --surface: #1c1f2b;
+          --text: #eceef5;
+          --muted: #a0a6b8;
+          --border: #2c3040;
+          --primary: #4ade9f;
+          --primary-dark: #86efbd;
+          --primary-soft: #14322a;
+          --ok: #4ade9f;
+          --ok-soft: #172f26;
+          --ng: #f08a8a;
+          --ng-soft: #33201f;
+        }
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 40px 16px 64px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans",
+          "Noto Sans JP", "Yu Gothic UI", sans-serif;
+        line-height: 1.7;
+        font-size: 16px;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      code {
+        background: var(--primary-soft);
+        color: var(--primary-dark);
+        padding: 1px 5px;
+        border-radius: 6px;
+        font-size: 0.9em;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.5rem, 4vw, 2.1rem);
+      }
+
+      .lead {
+        margin: 0 0 32px;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+        margin-bottom: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 24px;
+      }
+
+      .card h2 {
+        margin-top: 0;
+        font-size: 1.05rem;
+      }
+
+      .note {
+        margin-top: 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      dl.status {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 16px;
+        margin: 0;
+        align-items: center;
+      }
+      dl.status dt {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      dl.status dd {
+        margin: 0;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+      .badge.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+      .badge.ng {
+        background: var(--ng-soft);
+        color: var(--ng);
+      }
+      .badge.off {
+        background: var(--border);
+        color: var(--muted);
+      }
+
+      table.roles {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+      table.roles th,
+      table.roles td {
+        text-align: left;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      table.roles th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      ol.steps {
+        margin: 0 0 12px;
+        padding-left: 1.4em;
+        font-size: 0.9rem;
+        line-height: 1.9;
+      }
+
+      /* --- 動作確認用のTodo --- */
+      form.add {
+        display: flex;
+        gap: 8px;
+        margin: 16px 0 0;
+      }
+      form.add input {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+      }
+      form.add input:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 1px;
+      }
+
+      button {
+        padding: 9px 16px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: var(--primary);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.ghost {
+        background: transparent;
+        color: var(--text);
+        border-color: var(--border);
+        padding: 3px 10px;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      ul.todos {
+        list-style: none;
+        padding: 0;
+        margin: 16px 0 0;
+      }
+      ul.todos li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      ul.todos li .text {
+        flex: 1;
+        min-width: 0;
+        word-break: break-word;
+      }
+      ul.todos li.done .text {
+        text-decoration: line-through;
+        color: var(--muted);
+      }
+      .empty {
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 8px 0;
+      }
+
+      #error {
+        margin: 16px 0 0;
+        padding: 12px 16px;
+        border-radius: 6px;
+        border-left: 4px solid var(--ng);
+        background: var(--ng-soft);
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <h1>セットアップ完了 🎉</h1>
+      <p class="lead">
+        この画面が見えていれば、Django・Docker・DBの接続まで動いています。
+      </p>
+
+      <div class="grid">
+        <article class="card">
+          <h2>いまの状態</h2>
+          <dl class="status">
+            <dt>アプリ</dt>
+            <dd><span class="badge ok">起動中</span></dd>
+
+            <dt>データベース</dt>
+            <dd>
+              {% if db_status == "ok" %}
+              <span class="badge ok">接続OK</span>
+              {% else %}
+              <span class="badge ng">未接続</span>
+              <small>{{ db_message }}</small>
+              {% endif %}
+            </dd>
+
+            <dt>ログイン機能</dt>
+            <dd>
+              {% if AUTH_ENABLED %}
+              <span class="badge ok">有効</span>
+              {% else %}
+              <span class="badge off">無効</span>
+              {% endif %}
+            </dd>
+
+            <dt>ログイン状態</dt>
+            <dd>
+              {% if logged_in %}
+              <span class="badge ok">ログイン中</span>
+              {% else %}
+              <span class="badge off">未ログイン</span>
+              {% endif %}
+            </dd>
+
+            <dt>管理画面</dt>
+            <dd>
+              <a href="/admin/">/admin/ を開く</a>
+              <small>(入り方は docs/SETUP.md)</small>
+            </dd>
+          </dl>
+        </article>
+
+        <article class="card">
+          <h2>担当ごとに触る場所</h2>
+          <p class="note">分けてあるので、基本的にファイルの取り合いになりません。</p>
+          <table class="roles">
+            <thead>
+              <tr>
+                <th>担当</th>
+                <th>触る場所</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>見た目</td>
+                <td><code>templates/</code> と <code>static/css/</code></td>
+              </tr>
+              <tr>
+                <td>画面の動き</td>
+                <td><code>static/js/</code></td>
+              </tr>
+              <tr>
+                <td>データの形</td>
+                <td><code>main/models.py</code></td>
+              </tr>
+              <tr>
+                <td>URLと処理</td>
+                <td><code>main/views.py</code> / <code>main/api.py</code></td>
+              </tr>
+              <tr>
+                <td>ログイン</td>
+                <td><code>accounts/</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <h2>ここから作りはじめる</h2>
+          <p class="note">この画面を消す作業はありません。下を書けば自動で入れ替わります。</p>
+          <ol class="steps">
+            <li><code>templates/</code> にHTMLを1枚置く</li>
+            <li><code>main/views.py</code> にその画面を返す関数を書く</li>
+            <li><code>main/urls.py</code> の <code>path("", ...)</code> のコメントを外す</li>
+          </ol>
+          <p class="note">
+            書き方の見本は <code>templates/login.html</code> です(base.html を継いだ本物のページ)。
+          </p>
+          <p class="note">
+            デモをもう一度見たいときは <a href="/__demo">/__demo</a>(開発モードのときだけ開けます)。
+          </p>
+        </article>
+      </div>
+
+      <section class="card">
+        <h2>動作確認用のサンプル(Todo)</h2>
+        <p class="note">
+          追加・完了・削除ができれば、画面 ↔ サーバー ↔ DB が全部つながっています。
+          追加したものは <a href="/admin/">管理画面</a> からも確認できます。
+        </p>
+
+        <form class="add" id="todo-form">
+          <input
+            type="text"
+            id="todo-title"
+            placeholder="やることを入力"
+            maxlength="200"
+            required
+          />
+          <button type="submit">追加</button>
+        </form>
+
+        <ul class="todos" id="todo-list"></ul>
+        <p id="error" hidden></p>
+      </section>
+    </div>
+
+    <script>
+      /* =====================================================================
+         デモ用。このページの中だけで完結させています。
+
+         ★自分たちのページを作るときは、この書き方をまねないでください。
+           static/js/main.js に api / showMessage / withBusy という同じ道具が
+           用意してあるので、そちらを使えば下の通信まわりは書かずに済みます。
+
+         相手は demo/api.py:
+             GET    /__demo/api/todos              一覧
+             POST   /__demo/api/todos/create       追加   {"title": "..."}
+             PATCH  /__demo/api/todos/:id          完了の切り替え
+             DELETE /__demo/api/todos/:id/delete   削除
+
+         項目名(id / title / is_done)は demo/models.py の to_dict() で決まる。
+         ===================================================================== */
+
+      // 整理券(CSRFトークン)。これが無いと Django に 403 で弾かれる。
+      // 本物のページでは base.html の <meta> に入っていて main.js が自動で付ける。
+      const CSRF = "{{ csrf_token }}";
+
+      const form = document.getElementById("todo-form");
+      const input = document.getElementById("todo-title");
+      const list = document.getElementById("todo-list");
+      const errorBox = document.getElementById("error");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const title = input.value.trim();
+        if (!title) return;
+
+        const button = form.querySelector("button");
+        button.disabled = true;
+        try {
+          await send("/__demo/api/todos/create", "POST", { title });
+          input.value = "";
+          await load();
+        } catch (error) {
+          showError(error.message);
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      async function load() {
+        try {
+          const data = await send("/__demo/api/todos", "GET");
+          render(data.todos ?? []);
+          errorBox.hidden = true;
+        } catch (error) {
+          showError(error.message);
+        }
+      }
+
+      async function send(url, method, body = null) {
+        const response = await fetch(url, {
+          method: method,
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-CSRFToken": CSRF,
+          },
+          body: body === null ? null : JSON.stringify(body),
+        });
+
+        // サーバーが落ちるとHTMLが返ることもあるので、変換失敗を許容する。
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.error || `通信に失敗しました (ステータス: ${response.status})`
+          );
+        }
+        return payload;
+      }
+
+      function render(todos) {
+        list.textContent = "";
+
+        if (todos.length === 0) {
+          const empty = document.createElement("li");
+          empty.className = "empty";
+          empty.textContent = "まだ何もありません。";
+          list.appendChild(empty);
+          return;
+        }
+
+        for (const todo of todos) {
+          const item = document.createElement("li");
+          if (todo.is_done) item.className = "done";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = todo.is_done;
+          checkbox.addEventListener("change", async () => {
+            try {
+              await send(`/__demo/api/todos/${todo.id}`, "PATCH");
+              await load();
+            } catch (error) {
+              showError(error.message);
+            }
+          });
+
+          const text = document.createElement("span");
+          text.className = "text";
+          // 利用者の入力が混ざるので innerHTML は使わない
+          text.textContent = todo.title;
+
+          const remove = document.createElement("button");
+          remove.className = "ghost";
+          remove.textContent = "削除";
+          remove.addEventListener("click", async () => {
+            remove.disabled = true;
+            try {
+              await send(`/__demo/api/todos/${todo.id}/delete`, "DELETE");
+              await load();
+            } catch (error) {
+              showError(error.message);
+            } finally {
+              remove.disabled = false;
+            }
+          });
+
+          item.append(checkbox, text, remove);
+          list.appendChild(item);
+        }
+      }
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+      }
+
+      load();
+    </script>
+  </body>
+</html>

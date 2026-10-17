@@ -1,0 +1,360 @@
+/* ===========================================================================
+   style.css
+
+   構成: 1.パレット / 2.リセット / 3.共通部品 / 4.ページごと
+   色や余白は :root にまとめてあるので、テーマ変更はパレットだけ触れば済む。
+   =========================================================================== */
+
+/* ===========================================================================
+   1. パレット
+
+   色や余白の値はここで1回だけ決めて、あとは var(--名前) で呼ぶ。
+   プロダクトの色が決まったら、ここの1行を直せば全画面に反映される。
+
+       :root { --color-primary: #0c6b4f; }
+       .btn-primary { background: var(--color-primary); }
+
+   ★新しい部品も必ず var(--...) で書く。#ffffff の直書きはしない。
+     直書きすると、そこだけ暗い画面で白く光る。
+   =========================================================================== */
+:root {
+  --color-bg: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-text: #1f2333;
+  --color-text-muted: #6b7280;
+  --color-border: #e3e6ef;
+
+  --color-primary: #0c6b4f;
+  --color-primary-dark: #094e3a;
+  --color-primary-soft: #e6f2ed;
+
+  --color-success: #0f8f5f;
+  --color-success-soft: #e6f7ef;
+  --color-error: #d13b3b;
+  --color-error-soft: #fdeded;
+  --color-warning: #b7791f;
+  --color-warning-soft: #fdf6e3;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(20, 24, 45, 0.06), 0 6px 18px rgba(20, 24, 45, 0.05);
+
+  --container: 1040px;
+}
+
+/* OSがダークモードのときだけ、変わる値を上書きする。部品側は触らない。 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #14161f;
+    --color-surface: #1c1f2b;
+    --color-text: #eceef5;
+    --color-text-muted: #a0a6b8;
+    --color-border: #2c3040;
+
+    --color-primary: #4ade9f;
+    --color-primary-dark: #86efbd;
+    --color-primary-soft: #14322a;
+
+    --color-success-soft: #172f26;
+    --color-error-soft: #33201f;
+    --color-warning-soft: #322a1a;
+  }
+}
+
+/* ===========================================================================
+   2. リセット
+
+   ブラウザが勝手に付ける余白や装飾をならして、出発点を揃える場所。
+   ページを作るときはここを触らない。
+   =========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans",
+    "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+/* ===========================================================================
+   3. 共通部品
+
+   どのページでも使う部品(ヘッダー・ボタン・入力欄・メッセージなど)。
+   ★ここを直すと全ページに効く。1ページだけ変えたいときは 4 に書く。
+   =========================================================================== */
+
+/* --- ヘッダー --- */
+.site-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 60px;
+  flex-wrap: wrap;
+}
+
+.site-title {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--color-text);
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.nav-user {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-right: var(--space-2);
+}
+
+/* ログアウトはPOSTなのでフォーム。ヘッダー内で横並びにする */
+.inline-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+/* --- ボタン --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+  text-decoration: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.btn-ghost:hover {
+  background: var(--color-primary-soft);
+  text-decoration: none;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* 二重送信防止でJSが無効化したときの見た目(main.js の withBusy) */
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --- メッセージ ---
+   クラス名の後半は Python の messages.success(request, ...) の種類と対応している。
+   Djangoが message.tags として success / error / warning / info を渡してくる。 */
+.flash-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.flash {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid;
+  font-size: 0.95rem;
+}
+
+.flash-success {
+  background: var(--color-success-soft);
+  border-color: var(--color-success);
+}
+.flash-error {
+  background: var(--color-error-soft);
+  border-color: var(--color-error);
+}
+.flash-warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning);
+}
+.flash-info,
+.flash-debug {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+/* --- フォーム --- */
+.stacked-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* ===========================================================================
+   4. ページごと
+
+   そのページでしか使わない見た目。
+   ★2ページ以上で使うようになったら 3 に引っ越す。
+   =========================================================================== */
+
+/* --- ログイン / 新規登録 --- */
+.auth-panel {
+  max-width: 400px;
+  margin: var(--space-7) auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space-6);
+}
+
+.auth-panel h1 {
+  margin: 0 0 var(--space-5);
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.auth-switch {
+  margin: var(--space-5) 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* --- エラーページ(400 / 403 / 404 / 500) --- */
+.error-panel {
+  max-width: 520px;
+  margin: var(--space-7) auto;
+  text-align: center;
+}
+
+/* 数字。ここだけ大きくして、一目で何が起きたか分かるようにする。 */
+.error-code {
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-primary);
+}
+
+.error-name {
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+
+  /* 英語の種類名は補足なので、本文より控えめにする。 */
+  font-weight: 500;
+}
+
+.error-message {
+  margin: 0 0 var(--space-6);
+}
+
+/* --- フッター --- */
+.site-footer {
+  margin-top: var(--space-7);
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
