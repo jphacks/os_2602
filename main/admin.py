@@ -1,21 +1,52 @@
-# =============================================================================
-# admin.py = 管理画面に何を表示するかの設定
-#
-# ★ここに数行書くだけで、データを一覧・検索・追加・編集・削除できる画面が
-#   完成する。自分で管理用の画面を作らなくてよい(Djangoの最大の武器)。
-#
-#   管理者アカウントの作り方は docs/SETUP.md → http://localhost:8000/admin/
-#   書き方の見本は demo/admin.py。
-# =============================================================================
+from django.contrib import admin
 
-from django.contrib import admin  # noqa: F401
+from .models import BadgeType, Measurement, MeasurementTag, Post, Tag, TimeBand, UserBadge
 
 
-# ★ここから書きはじめる
-#
-#   from main.models import Post
-#
-#   @admin.register(Post)
-#   class PostAdmin(admin.ModelAdmin):
-#       list_display = ("id", "title", "created_at")   # 一覧に並べる列
-#       search_fields = ("title",)                     # 上に出る検索窓
+@admin.register(TimeBand)
+class TimeBandAdmin(admin.ModelAdmin):
+    list_display = ["name", "start_time", "end_time", "sort_order", "is_active"]
+    list_editable = ["sort_order", "is_active"]
+
+
+@admin.register(BadgeType)
+class BadgeTypeAdmin(admin.ModelAdmin):
+    list_display = ["name", "category", "condition_operator", "threshold_db", "required_duration_seconds", "sort_order"]
+    list_editable = ["threshold_db", "required_duration_seconds", "sort_order"]  # デモ中にしきい値を調整できる
+
+
+@admin.register(Measurement)
+class MeasurementAdmin(admin.ModelAdmin):
+    list_display = ["id", "user", "avg_db", "max_db", "duration_seconds", "time_band", "measured_at", "cell_x", "cell_y"]
+    list_filter = ["time_band"]
+    date_hierarchy = "measured_at"
+
+
+@admin.register(UserBadge)
+class UserBadgeAdmin(admin.ModelAdmin):
+    list_display = ["id", "user", "badge_type", "time_band", "show_on_map", "acquired_at"]
+    list_filter = ["badge_type", "time_band", "show_on_map"]
+
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    list_display = ["id", "user_badge", "created_at"]
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ["name", "tag_type", "start_month", "start_day", "end_month", "end_day", "is_active", "sort_order"]
+    list_filter = ["tag_type", "is_active"]
+    list_editable = ["is_active", "sort_order"]
+    fieldsets = [
+        (None, {"fields": ["name", "icon", "tag_type", "is_active", "sort_order"]}),
+        ("季節タグの期間（毎年くり返す。共通タグは空のまま）", {
+            "fields": [("start_month", "start_day", "start_time"), ("end_month", "end_day", "end_time")],
+        }),
+    ]
+
+
+@admin.register(MeasurementTag)
+class MeasurementTagAdmin(admin.ModelAdmin):
+    list_display = ["measurement", "tag", "created_at"]
+    list_filter = ["tag"]

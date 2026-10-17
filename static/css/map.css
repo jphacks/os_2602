@@ -1,0 +1,111 @@
+/* dether マップの見た目。色はここだけで管理する（④が調整） */
+:root {
+  --dether-me: #2f6fed;
+  --dether-loud: #d9480f;
+  --dether-quiet: #2b8a6e;
+  --dether-pin-text: #ffffff;
+  --dether-pin-ring: #ffffff;
+  --dether-pin-night-ring: #1b2340;
+  --dether-surface: #ffffff;
+  --dether-text: #1c1f24;
+  --dether-muted: #5d6673;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dether-me: #6b9bff;
+    --dether-loud: #ff7a3d;
+    --dether-quiet: #4cc9a0;
+    --dether-pin-text: #10131a;
+    --dether-pin-ring: #10131a;
+    --dether-pin-night-ring: #c9d4ff;
+    --dether-surface: #1b1f27;
+    --dether-text: #eef1f5;
+    --dether-muted: #a3adbb;
+  }
+}
+
+.dether-map {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+}
+
+/* 現在地ピン */
+.me-pin {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--dether-me);
+  border: 3px solid var(--dether-pin-ring);
+  box-shadow: 0 0 0 1px var(--dether-me);
+}
+
+/* バッジピン：系統で色、時間帯で縁取りを変える */
+.badge-pin {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font: 700 14px/1 system-ui, sans-serif;
+  color: var(--dether-pin-text);
+  background: var(--dether-loud);
+  border: 3px solid var(--dether-pin-ring);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.badge-pin[data-system='quiet'] {
+  background: var(--dether-quiet);
+}
+.badge-pin[data-band='night'] {
+  border-color: var(--dether-pin-night-ring);
+}
+
+/* 画面側の部品（デモ用。本番は④のデザインに置き換える） */
+.badge-sheet {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--dether-surface);
+  color: var(--dether-text);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+.badge-sheet[hidden] {
+  display: none;
+}
+.badge-sheet small {
+  color: var(--dether-muted);
+}
+.map-notice {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 12px;
+  right: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--dether-surface);
+  color: var(--dether-text);
+  font-size: 14px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+.map-notice[hidden] {
+  display: none;
+}
+.map-recenter {
+  position: absolute;
+  right: 12px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dether-surface);
+  color: var(--dether-text);
+  font: 600 14px system-ui, sans-serif;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+}
