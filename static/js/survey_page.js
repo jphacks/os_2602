@@ -211,7 +211,7 @@
   function updateSession(result, note, newBadge) {
     $("session-count").textContent = String(survey.sessionCount);
     $("session-last").textContent = `直前の測定：${fmt1(result.avgDb)} dB・${note}`;
-    if (newBadge) $("session-badge").replaceChildren(Badge.medal(newBadge, "list"));
+    if (newBadge) $("session-badge").replaceChildren(Badge.medal(newBadge, "list", { spectrum: result.spectrum }));
   }
 
   // 「最近の記録」の先頭に1行足す（タグは後から付けるので、ここではバッジ名か「タグなし」）
@@ -224,8 +224,11 @@
     slot("meta").textContent =
       `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, "0")}:` +
       `${String(at.getMinutes()).padStart(2, "0")}` + (timeBand ? `・${timeBand.name}` : "");
-    if (badge) slot("badge").replaceWith(Badge.medal(badge, "md", { band: timeBand && timeBand.code }));
-    else slot("badge").remove();
+    if (badge) {
+      slot("badge").replaceWith(Badge.medal(badge, "md", { band: timeBand && timeBand.code, spectrum: result.spectrum }));
+    } else {
+      slot("badge").remove();
+    }
 
     const list = $("recent-list");
     list.prepend(row);
@@ -236,7 +239,8 @@
   function openPopup(d) {
     const band = d.timeBand ? d.timeBand.code : null; // "d"（昼）/ "n"（夜）
     // ★開くたびに作り直す。そうすると獲得の演出（ポンと出て光が走る）が毎回再生される
-    $("badge-popup-medal").replaceChildren(Badge.medal(d.badge, "popup", { isNew: true, band }));
+    // 数字の後ろの面に、その場の音の形（音の標本）を描く
+    $("badge-popup-medal").replaceChildren(Badge.medal(d.badge, "popup", { isNew: true, band, spectrum: d.result.spectrum }));
     $("badge-popup-title").textContent = d.name;
     const bandName = d.timeBand ? d.timeBand.name : "";
     // 企画書：昼の静寂・深い静寂と夜の90dBはレア（判定は badge.js）

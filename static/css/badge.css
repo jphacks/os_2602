@@ -70,6 +70,25 @@
     inset 0 0 0 4px var(--ln);
 }
 
+/* ---------- 音の標本（数字の後ろの面に描くクラドニ図形。badge.js の specimen） ---------- */
+/* 重なり順：縁(::before) → 面(::after) → 模様 → 数字 */
+.medal__specimen {
+  position: absolute;
+  inset: 22%; /* 面（inset 14%）の内側の線（面の縁から4px）より内側。48pxのメダルでも線にかからない */
+  z-index: 0;
+  width: 56%;
+  height: 56%;
+  border-radius: 50%;
+  opacity: 0.8; /* 砂の濃さ */
+  pointer-events: none;
+}
+.medal__mark {
+  position: relative;
+  z-index: 1;
+  /* 砂の上でも数字が読めるよう、面の色でふちどる */
+  text-shadow: 0 0 2px var(--face), 0 0 4px var(--face), 0 0 6px var(--face);
+}
+
 /* ---------- 種類 ---------- */
 .m-b90 { --rim: #243B35; --face: #F1E9D2; --ln: #243B35; --txt: #243B35; }
 .m-b80 { --rim: #6B8E7B; --face: #F1E9D2; --ln: #6B8E7B; --txt: #243B35; }

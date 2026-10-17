@@ -48,6 +48,8 @@
      judge-cancel { mode, elapsed }    音量が通常に戻ったので判定を取り消した
      warning      { db }               85dB以上が続いている（耳を守る案内。10秒に1回まで）
      round        { result }           区間が終わって送る（result.judge が "loud"/"quiet" なら判定つき）
+                    result.spectrum … 音の形（0〜1 が16個。低音→高音）。バッジの「音の標本」の模様に使う
+                    （DetherBadge.medal の opt.spectrum に渡す）。帯ごとの強さの平均だけで、音声は残さない
      recorded     { result, response, badge, already, timeBand }   記録した。新しいバッジではない
      badge        { result, response, badge, name, replaced, timeBand }  新しいバッジ！ 一時停止中
                     timeBand = { id, name, code }（id は TimeBand.id。code は TimeBand.code の "d" / "n"）
@@ -93,6 +95,12 @@
     warningIntervalMs: 10000,
     // 何msごとに音量を読むか
     tickMs: 100,
+    // 音の形（音の標本）：低音〜高音をこの数の帯に分けて強さを取る。帯の幅は音の高さの感じ方に合わせて対数で等分
+    spectrumBands: 16,
+    spectrumMinHz: 60,
+    spectrumMaxHz: 12000,
+    // 一番強い帯からこのdB下までを 0〜1 に直す（それより弱い帯は 0）
+    spectrumRangeDb: 40,
     // 測定を送るURL（docs/API_measurement.md と合わせる）
     apiUrl: "/api/measurements",
   };
@@ -125,6 +133,7 @@
       this.analyser = null;
       this.source = null;
       this.buf = null;
+      this.freqBuf = null;
     }
 
     get isOpen() {
@@ -168,6 +177,34 @@
       this.source = this.ctx.createMediaStreamSource(this.stream);
       this.source.connect(this.analyser); // スピーカーには繋がない（ハウリングしない）
       this.buf = new Float32Array(this.analyser.fftSize);
+      this.freqBuf = new Float32Array(this.analyser.frequencyBinCount);
+    }
+
+    /**
+     * いまの音の形を1つ読む（音の標本用）。帯ごとの強さ（エネルギー。dBではない）の配列。
+     * ★音そのものではなく帯ごとの強さだけなので、会話の中身は元に戻せない
+     * @param {number} level  read() で読んだいまの推定dB（シミュレーションのときに使う）
+     */
+    readSpectrum(level) {
+      if (this.simulate) return fakeSpectrum(level);
+      if (!this.analyser || !this.freqBuf) return null;
+      this.analyser.getFloatFrequencyData(this.freqBuf); // 周波数ごとの強さ（dBFS）
+      const binHz = this.ctx.sampleRate / this.analyser.fftSize;
+      const n = CONFIG.spectrumBands;
+      const out = new Array(n).fill(0);
+      for (let b = 0; b < n; b++) {
+        const lo = CONFIG.spectrumMinHz * Math.pow(CONFIG.spectrumMaxHz / CONFIG.spectrumMinHz, b / n);
+        const hi = CONFIG.spectrumMinHz * Math.pow(CONFIG.spectrumMaxHz / CONFIG.spectrumMinHz, (b + 1) / n);
+        const i0 = Math.max(1, Math.floor(lo / binHz));
+        const i1 = Math.min(this.freqBuf.length - 1, Math.max(i0, Math.ceil(hi / binHz) - 1));
+        let sum = 0;
+        for (let i = i0; i <= i1; i++) {
+          const db = this.freqBuf[i];
+          if (Number.isFinite(db)) sum += energy(db);
+        }
+        out[b] = sum / (i1 - i0 + 1);
+      }
+      return out;
     }
 
     /** いまの推定dBを1つ読む */
@@ -193,6 +230,7 @@
       this.stream = null;
       this.source = null;
       this.analyser = null;
+      this.freqBuf = null;
       if (this.ctx && this.ctx.state === "running") this.ctx.suspend().catch(() => {});
     }
 
@@ -343,6 +381,8 @@
         max: -Infinity,
         readings: [], // 100msごとの値（誘導・取り消しの判定用）
         belowSeconds: 0, // 大きい音の判定中、70未満が続いている秒数
+        specE: new Array(CONFIG.spectrumBands).fill(0), // 音の形：帯ごとの強さの合計
+        specN: 0,
         startedAt: new Date(),
       };
     }
@@ -397,6 +437,11 @@
       s.sumE += energy(L);
       s.max = Math.max(s.max, L);
       s.readings.push(L);
+      const spec = this.meter.readSpectrum(L);
+      if (spec) {
+        for (let b = 0; b < spec.length; b++) s.specE[b] += spec[b];
+        s.specN += 1;
+      }
 
       // 今の音量（直近1秒のLeq）
       const windowSize = Math.max(1, Math.round(CONFIG.levelWindowMs / CONFIG.tickMs));
@@ -472,6 +517,7 @@
         durationSeconds: round1(s.elapsed),
         judge,
         mode: s.mode,
+        spectrum: spectrumShape(s.specE, s.specN), // 音の形（0〜1 が16個。低音→高音）。取れなければ null
         startedAt: s.startedAt,
         endedAt: new Date(),
       };
@@ -594,6 +640,34 @@
     if (n === "NotAllowedError" || n === "SecurityError") return "mic-denied";
     if (n === "NotFoundError" || n === "OverconstrainedError") return "mic-missing";
     return "mic-failed";
+  }
+
+  /**
+   * 区間の帯ごとの強さの合計 → 音の形（0〜1）。一番強い帯が 1、それより spectrumRangeDb 以上弱い帯は 0。
+   * 大きさではなく「形」だけにするので、同じ場所なら端末や音量が少し違っても似た形になる
+   */
+  function spectrumShape(sumE, n) {
+    if (!n) return null;
+    const db = sumE.map((e) => (e > 0 ? 10 * Math.log10(e / n) : -Infinity));
+    const top = Math.max.apply(null, db);
+    if (!Number.isFinite(top)) return null;
+    const range = CONFIG.spectrumRangeDb;
+    return db.map((v) => Math.round(clamp((v - (top - range)) / range, 0, 1) * 100) / 100);
+  }
+
+  /** シミュレーション（マイクなし）用の音の形。音量で形が変わり、少し揺らぐ */
+  function fakeSpectrum(level) {
+    const n = CONFIG.spectrumBands;
+    const out = new Array(n);
+    // 大きい音ほど低音が強い・静かなほど平ら、のような形にする。山の位置も音量で動かす
+    const tilt = level >= 70 ? -2.2 : -0.6;
+    const peak = Math.floor(((level - 30) / 70) * n) % n;
+    for (let b = 0; b < n; b++) {
+      const bump = 12 * Math.exp(-Math.pow((b - (n - 1 - peak)) / 1.6, 2));
+      const noise = (Math.random() * 2 - 1) * 2;
+      out[b] = energy(level + tilt * b + bump + noise);
+    }
+    return out;
   }
 
   function avg(arr) {
