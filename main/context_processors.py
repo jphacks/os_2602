@@ -16,7 +16,7 @@ from django.conf import settings
 # =============================================================================
 
 # SITE_NAME = サイトの表示名。全ページのタイトルとヘッダーに出る。
-SITE_NAME = "Django Template Demo"
+SITE_NAME = "dether"
 
 # SITE_DESCRIPTION = 説明文を渡さなかったページで使われる文章。
 #
@@ -25,7 +25,8 @@ SITE_NAME = "Django Template Demo"
 # ★120文字前後に収めること。長いと検索結果で途中から切られる。
 # ★ページごとに変えたいときは、render(...) に "description" を渡す。
 SITE_DESCRIPTION = (
-    "Djangoのハッカソン用テンプレート。docker compose up だけで開発環境が立ち上がります。"
+    "調査ボタンで身の回りの音を測り、うるさい場所や静かな場所でバッジを集める位置情報ゲーム。"
+    "みんなの記録が、どこでどんな音が鳴っているかがわかる街の騒音マップになります。"
 )
 
 # OGP_IMAGE = SNSに貼ったときに出るサムネイル画像。

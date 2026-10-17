@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% comment %}
+  index.html = 調査ページ（トップ）。
+
+  画面は2つあり、survey_page.js が調査の状態に合わせて片方だけ出す。
+    #survey-idle … 調査する前（調査ボタンと最近の記録）
+    #survey-live … 調査中（推定dBのゲージ・平均と最大・波形・この調査の記録）
+  バッジ獲得のポップアップ（#badge-popup）もここにある。
+
+  ★id は survey_page.js が使っている。変えるときは両方直す。
+  ★測定の処理は measure.js（①）。このページはイベントを受け取って描くだけ。
+{% endcomment %}
+{% load static %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{% static 'css/survey.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="survey">
+  {# ===== 調査する前 ===== #}
+  <section id="survey-idle" aria-label="調査">
+    <div class="survey-start">
+      <div class="survey-start__well">
+        <button id="survey-start" class="survey-start__button" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
+          </svg>
+          調査する
+        </button>
+      </div>
+    </div>
+
+    <p class="survey-privacy">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 5a3 3 0 0 1 6 0v5" />
+        <path d="M15 13.5A3 3 0 0 1 9 12V9" />
+        <path d="M19 11a7 7 0 0 1-1.4 4.2M5 11a7 7 0 0 0 11 5.7M12 18v3" />
+        <path d="m4 3 16 18" />
+      </svg>
+      音声は保存しません
+    </p>
+
+    <div class="section-head">
+      <h2>最近の記録</h2>
+    </div>
+
+    <div class="d-card recent-card">
+      <ul id="recent-list" class="recent">
+        {% for row in recent %}
+        <li class="recent__row">
+          <span class="recent__db num">{{ row.measurement.avg_db|floatformat:1 }}<small>dB</small></span>
+          <span class="recent__body">
+            <span class="recent__title">{{ row.title }}</span>
+            <span class="recent__meta num">
+              {{ row.measurement.measured_at|date:"n/j H:i" }}{% if row.measurement.time_band %}・{{ row.measurement.time_band.name }}{% endif %}
+            </span>
+          </span>
+          {% if row.badge %}
+          <span class="coin" data-series="{{ row.series }}" title="{{ row.badge.name }}"><b>{{ row.coin }}</b></span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <p id="recent-empty" class="recent__empty" {% if recent %}hidden{% endif %}>
+        まだ記録がありません。<br />「調査する」を押して、まわりの音を測ってみよう
+      </p>
+    </div>
+  </section>
+
+  {# ===== 調査中 ===== #}
+  <section id="survey-live" aria-label="調査中" hidden>
+    <div class="live-top">
+      <span id="live-pill" class="live-pill" data-state="starting">準備中</span>
+      <span id="live-progress" class="live-progress num"></span>
+    </div>
+
+    <div class="gauge">
+      <div class="gauge__well">
+        {# pathLength="100" にしておくと、進み具合（0〜100）をそのまま線の長さにできる #}
+        <svg viewBox="0 0 212 212" aria-hidden="true">
+          <circle class="gauge__track" cx="106" cy="106" r="94" pathLength="100" />
+          <circle id="gauge-bar" class="gauge__bar" cx="106" cy="106" r="94" pathLength="100" />
+        </svg>
+        <div class="gauge__center" aria-live="off">
+          <span class="gauge__label">推定値</span>
+          <span id="gauge-value" class="gauge__value num">--</span>
+          <span class="gauge__unit num">dB</span>
+          <span id="gauge-chip" class="gauge__chip" hidden></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="live-stats">
+      <div class="d-card stat">
+        <span class="stat__label">平均（等価騒音レベル）</span>
+        <span class="stat__value num"><span id="live-avg">--</span> <small>dB</small></span>
+      </div>
+      <div class="d-card stat">
+        <span class="stat__label">最大</span>
+        <span class="stat__value num"><span id="live-max">--</span> <small>dB</small></span>
+      </div>
+    </div>
+
+    <div id="wave" class="d-card wave" aria-hidden="true"></div>
+
+    <div class="d-card session">
+      <div class="session__head">
+        <div>
+          <span class="session__label">この調査</span>
+          <p class="session__count"><b id="session-count" class="num">0</b> 件を記録</p>
+        </div>
+        <span id="session-coin" class="coin" style="--size: 46px" hidden><b></b></span>
+      </div>
+      <hr class="session__line" />
+      <p id="session-last" class="session__last">直前の測定：まだありません</p>
+    </div>
+
+    <div id="guide" class="d-card notice" hidden>
+      <span class="notice__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+      </span>
+      <div>
+        <h3>音の発生源に近づいてみよう</h3>
+        <p>安全な場所から ／ 立入禁止区域には入らない ／ 歩きスマホをしない</p>
+      </div>
+    </div>
+
+    <div id="warning" class="d-card notice notice--warning" hidden>
+      <span class="notice__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.3 4.2 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z" />
+          <path d="M12 9.5v4.5M12 17.5h.01" />
+        </svg>
+      </span>
+      <div>
+        <h3>大きな音が続いています</h3>
+        <p id="warning-text">長くいると耳を傷めることがあります。長居しないでね</p>
+      </div>
+    </div>
+
+    <div class="live-actions">
+      <button id="survey-resume" class="d-button d-button--strong" type="button" hidden>調査を再開する</button>
+      <button id="survey-stop" class="d-button d-button--ghost" type="button">調査を終える</button>
+    </div>
+  </section>
+
+  {# エラーはどちらの画面でも出す #}
+  <p id="survey-error" class="survey-error" role="alert" hidden></p>
+</div>
+
+{# 「最近の記録」に1行足すときの型（survey_page.js が複製して使う） #}
+<template id="recent-row">
+  <li class="recent__row">
+    <span class="recent__db num"><span data-slot="db"></span><small>dB</small></span>
+    <span class="recent__body">
+      <span class="recent__title" data-slot="title"></span>
+      <span class="recent__meta num" data-slot="meta"></span>
+    </span>
+    <span class="coin" data-slot="coin" hidden><b></b></span>
+  </li>
+</template>
+
+{# ===== バッジ獲得のポップアップ（表示中は measure.js が測定を一時停止している） ===== #}
+<div id="badge-popup" class="badge-popup" role="dialog" aria-modal="true" aria-labelledby="badge-popup-title" hidden>
+  <div class="badge-popup__sheet">
+    <span id="badge-popup-coin" class="coin" style="--size: 96px"><b></b></span>
+    <p class="badge-popup__kicker">
+      バッジ獲得！<span id="badge-popup-rare" class="badge-popup__rare" hidden>レア</span>
+    </p>
+    <h2 id="badge-popup-title" class="badge-popup__title"></h2>
+    <p id="badge-popup-note" class="badge-popup__note"></p>
+    <p id="badge-popup-replaced" class="badge-popup__replaced" hidden></p>
+    <div class="badge-popup__actions">
+      <button id="badge-popup-continue" class="d-button d-button--strong" type="button">調査を続ける</button>
+      <button id="badge-popup-stop" class="d-button d-button--ghost" type="button">調査を終える</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/measure.js' %}"></script>
+<script src="{% static 'js/survey_page.js' %}"></script>
+{% endblock %}

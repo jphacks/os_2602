@@ -1,0 +1,341 @@
+/* ===========================================================================
+   app.css = dether の見た目の土台（全ページ共通。base.html で読み込む）
+
+   構成: 1.パレット / 2.ページ全体 / 3.ヘッダー / 4.下のタブ / 5.共通部品
+
+   ★色は必ず var(--d-...) で書く。#ffffff の直書きはしない。
+     ライト・ダークの切り替えは、1のパレットを入れ替えるだけで全部に効く。
+   ★ライト・ダークは <html data-theme="light|dark"> で決まる。
+     最初の値は base.html の <head> の小さなスクリプトが入れる（保存した設定 → OSの設定の順）。
+   ★style.css（テンプレート）より後に読み込んで、テンプレートの色も dether の色に置き換えている。
+   =========================================================================== */
+
+/* ===========================================================================
+   1. パレット（色はリーダーのデザインから拾った値）
+   =========================================================================== */
+:root {
+  --d-bg: #f1e9d2;
+  --d-surface: #f6efda;
+  --d-text: #243b35;
+  --d-muted: #6f7469;
+  --d-accent: #6b8e7b;
+  --d-accent-soft: #b7c9b1;
+  --d-on-accent-soft: #243b35;
+  --d-track: #d7d4be;
+  --d-divider: #ddd9c6;
+  --d-edge: rgba(255, 255, 255, 0.65);
+  --d-strong: #243b35;
+  --d-on-strong: #f1e9d2;
+  --d-loud: #d69e64;
+  --d-very-loud: #bf6a4a;
+  --d-on-alert: #fbf5e6;
+
+  /* バッジのコイン */
+  --d-coin-ring: #6b8e7b;
+  --d-coin-face: #e7e1cb;
+  --d-coin-text: #243b35;
+  --d-coin-quiet-ring: #b7c9b1;
+  --d-coin-quiet-face: #243b35;
+  --d-coin-quiet-text: #f1e9d2;
+
+  /* ふくらみ（raised）とへこみ（inset）の影 */
+  --d-shadow-dark: rgba(150, 132, 92, 0.3);
+  --d-shadow-light: rgba(255, 255, 255, 0.85);
+  --d-raised: 6px 6px 14px var(--d-shadow-dark), -6px -6px 14px var(--d-shadow-light);
+  --d-raised-lg: 16px 16px 32px var(--d-shadow-dark), -14px -14px 30px var(--d-shadow-light);
+  --d-inset: inset 5px 5px 12px var(--d-shadow-dark), inset -5px -5px 12px var(--d-shadow-light);
+
+  --d-radius: 22px;
+  --d-font: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP",
+    system-ui, sans-serif;
+  --d-font-num: "Poppins", var(--d-font);
+
+  /* テンプレート（style.css）の色を dether の色に置き換える。ログイン画面やエラー画面もこれで揃う */
+  --color-bg: var(--d-bg);
+  --color-surface: var(--d-surface);
+  --color-text: var(--d-text);
+  --color-text-muted: var(--d-muted);
+  --color-border: var(--d-divider);
+  --color-primary: var(--d-accent);
+  --color-primary-dark: var(--d-strong);
+  --color-primary-soft: var(--d-accent-soft);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --d-bg: #243b35;
+  --d-surface: #2e4940;
+  --d-text: #f1e9d2;
+  --d-muted: #a9b4a5;
+  --d-track: #3b564c;
+  --d-divider: #4a6055;
+  --d-edge: rgba(255, 255, 255, 0.07);
+  --d-strong: #b7c9b1;
+  --d-on-strong: #243b35;
+
+  --d-coin-face: #ddd8c3;
+
+  --d-shadow-dark: rgba(8, 18, 15, 0.45);
+  --d-shadow-light: rgba(255, 255, 255, 0.05);
+
+  --color-primary: var(--d-accent-soft);
+  --color-primary-dark: var(--d-accent-soft);
+
+  color-scheme: dark;
+}
+
+/* ===========================================================================
+   2. ページ全体
+   =========================================================================== */
+
+/* ★hidden を付けた要素は、display を指定していても必ず隠す */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  background: var(--d-bg);
+  color: var(--d-text);
+  font-family: var(--d-font);
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+  /* 下のタブに隠れないように、その分だけ余白を空ける */
+  padding-bottom: calc(116px + env(safe-area-inset-bottom));
+}
+
+/* スマホ縦長で作るので、PCで開いても真ん中に細く出す */
+.container {
+  max-width: 480px;
+  padding: 0 20px;
+}
+
+.num {
+  font-family: var(--d-font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===========================================================================
+   3. ヘッダー（ロゴとライト・ダークの切り替え）
+   =========================================================================== */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top)) 20px 8px;
+}
+
+.app-logo img {
+  height: 28px;
+  width: auto;
+}
+
+.app-logo .logo-dark,
+[data-theme="dark"] .app-logo .logo-light {
+  display: none;
+}
+[data-theme="dark"] .app-logo .logo-dark {
+  display: block;
+}
+
+.theme-toggle {
+  position: relative;
+  width: 58px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  color: var(--d-text);
+  cursor: pointer;
+}
+
+.theme-toggle__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--d-surface);
+  box-shadow: 2px 2px 5px var(--d-shadow-dark), -1px -1px 3px var(--d-shadow-light);
+  transition: transform 0.25s ease;
+}
+[data-theme="dark"] .theme-toggle__knob {
+  transform: translateX(26px);
+  background: var(--d-bg);
+}
+
+.theme-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+.theme-toggle .icon-moon,
+[data-theme="dark"] .theme-toggle .icon-sun {
+  display: none;
+}
+[data-theme="dark"] .theme-toggle .icon-moon {
+  display: block;
+}
+
+/* ===========================================================================
+   4. 下のタブ（調査・マップ・マイページ）
+   =========================================================================== */
+.tab-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: min(456px, calc(100% - 24px));
+  padding: 12px 8px 10px;
+  transform: translateX(-50%);
+  background: var(--d-surface);
+  border: 1px solid var(--d-edge);
+  border-radius: 30px;
+  box-shadow: var(--d-raised);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--d-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.tab:hover {
+  text-decoration: none;
+}
+
+.tab__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 30px;
+  border-radius: 999px;
+}
+.tab__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.tab[aria-current="page"] {
+  color: var(--d-text);
+  font-weight: 700;
+}
+.tab[aria-current="page"] .tab__icon {
+  background: var(--d-accent-soft);
+  color: var(--d-on-accent-soft);
+}
+
+/* ===========================================================================
+   5. 共通部品
+   =========================================================================== */
+
+/* --- カード --- */
+.d-card {
+  background: var(--d-surface);
+  border: 1px solid var(--d-edge);
+  border-radius: var(--d-radius);
+  box-shadow: var(--d-raised);
+}
+
+/* --- ボタン --- */
+.d-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  font: 700 15px var(--d-font);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.d-button:active {
+  transform: scale(0.98);
+}
+.d-button--strong {
+  background: var(--d-strong);
+  color: var(--d-on-strong);
+  box-shadow: var(--d-raised);
+}
+.d-button--ghost {
+  background: var(--d-bg);
+  color: var(--d-text);
+  box-shadow: var(--d-raised);
+}
+
+/* --- バッジのコイン ---
+   <span class="coin" data-series="loud"><b>80</b></span>
+   大きさは --size で変える（例：style="--size: 92px"） */
+.coin {
+  --size: 36px;
+  --ring: var(--d-coin-ring);
+  --face: var(--d-coin-face);
+  --ink: var(--d-coin-text);
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 60%),
+    var(--ring);
+  box-shadow: 2px 3px 7px var(--d-shadow-dark), -2px -2px 5px var(--d-shadow-light);
+}
+.coin[data-series="quiet"] {
+  --ring: var(--d-coin-quiet-ring);
+  --face: var(--d-coin-quiet-face);
+  --ink: var(--d-coin-quiet-text);
+}
+.coin::before {
+  content: "";
+  position: absolute;
+  inset: 13%;
+  border-radius: 50%;
+  background: var(--face);
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.15);
+}
+.coin::after {
+  content: "";
+  position: absolute;
+  inset: 21%;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  opacity: 0.85;
+}
+.coin b {
+  position: relative;
+  z-index: 1;
+  color: var(--ink);
+  font-family: var(--d-font-num);
+  font-size: calc(var(--size) * 0.3);
+  font-weight: 700;
+  line-height: 1;
+}
+.coin[data-series="quiet"] b {
+  font-family: var(--d-font);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
