@@ -6,6 +6,7 @@
     #survey-idle … 調査する前（調査ボタンと最近の記録）
     #survey-live … 調査中（推定dBのゲージ・平均と最大・波形・この調査の記録）
   バッジ獲得のポップアップ（#badge-popup）もここにある。
+  バッジの見た目はリーダーの部品（templates/components/badge.html と static/js/badge.js）を使う。
 
   ★id は survey_page.js が使っている。変えるときは両方直す。
   ★測定の処理は measure.js（①）。このページはイベントを受け取って描くだけ。
@@ -57,7 +58,7 @@
             </span>
           </span>
           {% if row.badge %}
-          <span class="coin" data-series="{{ row.series }}" title="{{ row.badge.name }}"><b>{{ row.coin }}</b></span>
+          {% include "components/badge.html" with code=row.badge.code size="md" %}
           {% endif %}
         </li>
         {% endfor %}
@@ -110,7 +111,7 @@
           <span class="session__label">この調査</span>
           <p class="session__count"><b id="session-count" class="num">0</b> 件を記録</p>
         </div>
-        <span id="session-coin" class="coin" style="--size: 46px" hidden><b></b></span>
+        <span id="session-badge" class="session__badge"></span>
       </div>
       <hr class="session__line" />
       <p id="session-last" class="session__last">直前の測定：まだありません</p>
@@ -160,14 +161,14 @@
       <span class="recent__title" data-slot="title"></span>
       <span class="recent__meta num" data-slot="meta"></span>
     </span>
-    <span class="coin" data-slot="coin" hidden><b></b></span>
+    <span data-slot="badge"></span>
   </li>
 </template>
 
 {# ===== バッジ獲得のポップアップ（表示中は measure.js が測定を一時停止している） ===== #}
 <div id="badge-popup" class="badge-popup" role="dialog" aria-modal="true" aria-labelledby="badge-popup-title" hidden>
   <div class="badge-popup__sheet">
-    <span id="badge-popup-coin" class="coin" style="--size: 96px"><b></b></span>
+    <div id="badge-popup-medal" class="badge-popup__medal"></div>
     <p class="badge-popup__kicker">
       バッジ獲得！<span id="badge-popup-rare" class="badge-popup__rare" hidden>レア</span>
     </p>

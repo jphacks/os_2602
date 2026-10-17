@@ -461,8 +461,9 @@
   text-align: center;
   animation: popup-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
-.badge-popup__sheet .coin {
-  margin: 0 auto;
+.badge-popup__medal {
+  display: flex;
+  justify-content: center;
 }
 
 @keyframes popup-in {

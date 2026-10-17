@@ -6,6 +6,9 @@
      画面に描くこと               … このファイル。DetherSurvey のイベントを受け取って描くだけ
      イベントの中身は measure.js の先頭か docs/API_measurement.md を見る。
 
+   ▼ バッジの見た目
+     リーダーの部品 static/js/badge.js（DetherBadge）で作る。コード（b80 など）を渡すだけでよい。
+
    ▼ 開発用：マイクの無いPCで試すとき
      /?sim=loud（85dB前後）や /?sim=quiet（37dB前後）で開くと、マイクの代わりに作った音で動く。
      位置は東京駅になる。記録はふつうにサーバーへ送るので、本番のURLでは使わないこと。
@@ -22,9 +25,8 @@
   const RECENT_MAX = 3; // 「最近の記録」に出す件数（main/views.py の RECENT_COUNT と同じ）
   const WARNING_MS = 6000; // 85dBの案内を出しておく時間
 
-  // コインに書く文字（main/views.py の _coin_text と同じ）
-  const COIN = { b90: "90", b80: "80", b70: "70", q40: "静", q35: "深" };
-  const NAMES = window.DetherMeasure.NAMES;
+  const Badge = window.DetherBadge;
+  const NAMES = Badge.NAMES;
 
   const MODE_TEXT = {
     normal: "調査中",
@@ -43,7 +45,6 @@
     return { tone: "quiet", text: "静か" };
   }
 
-  const seriesOf = (code) => (code && code[0] === "b" ? "loud" : "quiet");
   const fmt1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : "--");
 
   /* ---------- 調査の進行役（measure.js） ---------- */
@@ -177,7 +178,7 @@
     $("live-avg").textContent = "--";
     $("live-max").textContent = "--";
     $("session-count").textContent = "0";
-    $("session-coin").hidden = true;
+    $("session-badge").replaceChildren();
     $("session-last").textContent = "直前の測定：まだありません";
     pill.textContent = STATE_TEXT.starting;
     delete pill.dataset.mode;
@@ -199,14 +200,7 @@
   function updateSession(result, note, newBadge) {
     $("session-count").textContent = String(survey.sessionCount);
     $("session-last").textContent = `直前の測定：${fmt1(result.avgDb)} dB・${note}`;
-    if (newBadge) setCoin($("session-coin"), newBadge);
-  }
-
-  function setCoin(el, code) {
-    el.hidden = false;
-    el.dataset.series = seriesOf(code);
-    el.title = NAMES[code] || "";
-    el.querySelector("b").textContent = COIN[code] || "";
+    if (newBadge) $("session-badge").replaceChildren(Badge.medal(newBadge, "list"));
   }
 
   // 「最近の記録」の先頭に1行足す（タグは後から付けるので、ここではバッジ名か「タグなし」）
@@ -219,7 +213,8 @@
     slot("meta").textContent =
       `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, "0")}:` +
       `${String(at.getMinutes()).padStart(2, "0")}` + (timeBand ? `・${timeBand.name}` : "");
-    if (badge) setCoin(slot("coin"), badge);
+    if (badge) slot("badge").replaceWith(Badge.medal(badge, "md", { band: timeBand && timeBand.code }));
+    else slot("badge").remove();
 
     const list = $("recent-list");
     list.prepend(row);
@@ -228,14 +223,14 @@
   }
 
   function openPopup(d) {
-    setCoin($("badge-popup-coin"), d.badge);
+    const band = d.timeBand ? d.timeBand.code : null; // "d"（昼）/ "n"（夜）
+    // ★開くたびに作り直す。そうすると獲得の演出（ポンと出て光が走る）が毎回再生される
+    $("badge-popup-medal").replaceChildren(Badge.medal(d.badge, "popup", { isNew: true, band }));
     $("badge-popup-title").textContent = d.name;
-    const band = d.timeBand ? d.timeBand.name : "";
-    $("badge-popup-note").textContent = band ? `${band}のバッジとして記録しました` : "記録しました";
-    // 企画書：昼の静寂バッジと夜の90dBバッジはレア
-    const code = d.timeBand ? d.timeBand.code : null;
-    const rare = (seriesOf(d.badge) === "quiet" && code === "d") || (d.badge === "b90" && code === "n");
-    $("badge-popup-rare").hidden = !rare;
+    const bandName = d.timeBand ? d.timeBand.name : "";
+    $("badge-popup-note").textContent = bandName ? `${bandName}のバッジとして記録しました` : "記録しました";
+    // 企画書：昼の静寂・深い静寂と夜の90dBはレア（判定は badge.js）
+    $("badge-popup-rare").hidden = !(band && Badge.isRare(d.badge, band));
     const replaced = $("badge-popup-replaced");
     replaced.hidden = !d.replaced;
     if (d.replaced) replaced.textContent = `この場所の${NAMES[d.replaced] || "バッジ"}を上書きしました`;

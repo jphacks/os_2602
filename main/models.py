@@ -96,6 +96,14 @@ class BadgeType(models.Model):
             return (self.threshold_db, self.required_duration_seconds)
         return (self.required_duration_seconds, -self.threshold_db)
 
+    @property
+    def code(self):
+        """画面のバッジ部品（components/badge.html・badge.js）のコード。b90 / b80 / b70 / q40 / q35
+        ★静寂は秒数ではなくしきい値で分ける。測定の決まりでは静寂も深い静寂も15秒で、秒数では区別できない"""
+        if self.category == self.Category.LOUD:
+            return f"b{self.threshold_db:.0f}"
+        return "q35" if self.threshold_db <= 35 else "q40"
+
     @classmethod
     def satisfied_by(cls, avg_db, duration_seconds):
         """条件を満たすバッジを全部返す（強い順）"""

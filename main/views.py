@@ -20,8 +20,6 @@
 from django.http import JsonResponse
 from django.shortcuts import render
 
-from main.models import BadgeType
-
 # 調査ページの「最近の記録」に出す件数（static/js/survey_page.js の RECENT_MAX と同じ）
 RECENT_COUNT = 3
 
@@ -45,18 +43,8 @@ def _recent_row(measurement):
     return {
         "measurement": measurement,
         "title": "・".join(tags) or (best.name if best else "タグなし"),
-        "badge": best,
-        "coin": _coin_text(best) if best else "",
-        "series": "loud" if best and best.category == BadgeType.Category.LOUD else "quiet",
+        "badge": best,  # バッジの見た目は templates/components/badge.html に best.code を渡して描く
     }
-
-
-def _coin_text(badge_type):
-    """コインに書く文字。大きい音はしきい値の数字（80）、静寂は「静」、深い静寂は「深」。
-    measure.js の COIN（b80 → "80" / q40 → "静" / q35 → "深"）と合わせている。"""
-    if badge_type.category == BadgeType.Category.LOUD:
-        return f"{badge_type.threshold_db:.0f}"
-    return "深" if badge_type.threshold_db <= 35 else "静"
 
 
 def health(request):
