@@ -28,15 +28,12 @@ from main.models import BadgeType, Measurement, TimeBand, UserBadge
 if TYPE_CHECKING:
     from main.api_measure import MeasurementInput
 
-# 時間帯の名前 → 画面で使う短いコード（レアの判定用）。ここに無い時間帯は "t{id}"
-TIME_BAND_CODES = {"昼": "d", "夜": "n"}
-
-
 @dataclass(frozen=True)
 class TimeBandInfo:
+    """時間帯はDBに合わせて TimeBand.id で表す（地図の time_band と同じ）。name は表示用"""
+
     id: int | None  # TimeBand.id（DBに無い時刻なら None）
     name: str  # "昼" / "夜"
-    code: str  # "d" / "n"（画面がレアの判定に使う）
 
 
 @dataclass(frozen=True)
@@ -78,12 +75,10 @@ def get_time_band(measured_at: datetime) -> TimeBandInfo:
     """測った時刻の時間帯（TimeBand から引く。日またぎは TimeBand.contains が扱う）"""
     band = TimeBand.for_datetime(measured_at)
     if band is not None:
-        return TimeBandInfo(id=band.id, name=band.name, code=TIME_BAND_CODES.get(band.name, f"t{band.id}"))
+        return TimeBandInfo(id=band.id, name=band.name)
     # DBに時間帯が無い間の仮（保存はされない）
     hour = timezone.localtime(measured_at).hour
-    if 6 <= hour < 22:
-        return TimeBandInfo(id=None, name="昼", code="d")
-    return TimeBandInfo(id=None, name="夜", code="n")
+    return TimeBandInfo(id=None, name="昼" if 6 <= hour < 22 else "夜")
 
 
 def get_badge_rules() -> list[BadgeRule]:

@@ -77,7 +77,8 @@
     const el = document.createElement('div');
     el.className = 'badge-pin';
     el.dataset.system = badge.system; // "loud" | "quiet"
-    el.dataset.band = badge.time_band; // TimeBandの識別子（day / night など）
+    el.dataset.band = badge.time_band; // TimeBand.id（DBに合わせる）
+    el.dataset.bandName = badge.time_band_name || ''; // TimeBand.name（"昼" / "夜"。夜のピンの枠色に使う）
     el.textContent = badge.system === 'quiet' ? '静' : String(badge.threshold_db);
     el.title = badge.name;
     return el;
@@ -116,7 +117,8 @@
         name: d.name,
         system: d.system,
         threshold_db: d.threshold_db,
-        time_band: timeBand || 'day',
+        time_band: timeBand || null, // TimeBand.id
+        time_band_name: '昼',
         avg_db: d.threshold_db + 1.5,
         measured_at: new Date().toISOString(),
       });
@@ -131,7 +133,7 @@
    *   apiKey     Google Maps APIキー（本番用 / 開発用）
    *   mapId      マップID（AdvancedMarkerに必須）
    *   badgesUrl  自分のバッジ取得API（例: /api/badges/mine/）
-   *   timeBand   表示する時間帯の識別子（省略で全て）
+   *   timeBand   表示する時間帯の TimeBand.id（省略で全て）。APIには ?time_band=<id> で送る
    *   mock       trueでAPIの代わりにダミーデータを使う
    *   target     イベントの発火先（省略で container）
    */
