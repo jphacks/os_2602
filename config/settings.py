@@ -73,6 +73,13 @@ CSRF_TRUSTED_ORIGINS = [
 # False にすると、ログイン関連のURLを登録しない(config/urls.py で使っている)。
 AUTH_ENABLED = _env_bool("AUTH_ENABLED", True)
 
+# Google Maps の APIキーとマップID(AdvancedMarker に必須)。値は .env に書く。
+# ★キーはブラウザに渡るので隠せない。Google Cloud 側で「ウェブサイトの制限」を必ずかける。
+#   本番用(サブドメインに制限)と開発用(localhost と *.trycloudflare.com に制限)で分ける。
+# main/context_processors.py で全ページに渡している(templates/map.html が使う)。
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+GOOGLE_MAP_ID = os.getenv("GOOGLE_MAP_ID", "")
+
 
 # =============================================================================
 # 使う機能(アプリ)の一覧

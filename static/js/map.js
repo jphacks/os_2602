@@ -8,6 +8,7 @@
  *  - 画面(DOM)を触る処理は持たず、結果は CustomEvent で返す（見た目は④が決める）
  *  - 色や余白はCSS変数 / クラス（static/css/map.css）に任せ、JS内にスタイルを書かない
  *  - ピンは google.maps.marker.AdvancedMarkerElement（マップID必須）
+ *  - バッジのピンの見た目はリーダーの部品 DetherBadge.pin（static/js/badge.js・static/css/badge.css）
  *
  * 発火するイベント（target 上。既定は地図のコンテナ要素）
  *  dether:map-ready      { center }
@@ -72,21 +73,32 @@
     return (err && err.message) || '現在地を取得できませんでした';
   }
 
-  /* ---------- マーカーの中身（見た目はCSSクラスと data 属性で決まる） ---------- */
-  function createBadgeElement(badge) {
-    const el = document.createElement('div');
-    el.className = 'badge-pin';
-    el.dataset.system = badge.system; // "loud" | "quiet"
-    el.dataset.band = badge.time_band; // TimeBand.id（DBに合わせる）
-    el.dataset.bandName = badge.time_band_name || ''; // TimeBand.name（"昼" / "夜"。夜のピンの枠色に使う）
-    el.textContent = badge.system === 'quiet' ? '静' : String(badge.threshold_db);
-    el.title = badge.name;
-    return el;
+  /* ---------- マーカーの中身 ---------- */
+  // バッジのコード（b90 / b80 / b70 / q40 / q35）。APIは code を返す。無いとき（ダミーデータ）は系統としきい値から作る
+  function badgeCode(badge) {
+    if (badge.code) return badge.code;
+    if (badge.system === 'quiet') return Number(badge.threshold_db) <= 35 ? 'q35' : 'q40';
+    return 'b' + Math.round(Number(badge.threshold_db));
   }
 
+  // バッジのピンはリーダーの部品（static/js/badge.js の DetherBadge.pin）で作る。
+  // マイページや獲得ポップアップのメダルと同じ見た目になり、メダルの中心が地点に来るよう位置も補正済み
+  function createBadgeElement(badge, onClick) {
+    return global.DetherBadge.pin(badgeCode(badge), {
+      label: (badge.time_band_name ? badge.time_band_name + 'の' : '') + badge.name,
+      onClick: onClick,
+    });
+  }
+
+  // 現在地ピン（Google マップと同じ、白い縁の青い点と広がる波紋。見た目は map.css の .me-pin）
   function createMeElement() {
     const el = document.createElement('div');
     el.className = 'me-pin';
+    const pulse = document.createElement('span');
+    pulse.className = 'me-pin__pulse';
+    const dot = document.createElement('span');
+    dot.className = 'me-pin__dot';
+    el.append(pulse, dot);
     return el;
   }
 
@@ -145,7 +157,8 @@
     this.map = null;
     this.meMarker = null;
     this.accuracyCircle = null;
-    this.badgeMarkers = new Map(); // id -> { marker, badge }
+    this.badgeMarkers = new Map(); // id -> { marker, badge, content }
+    this.selectedId = null; // タップして選択中のバッジ（ピンの見た目を変える）
     this.lastPosition = null;
     this._watchId = null;
     this._fetchTimer = null;
@@ -232,16 +245,16 @@
         title: '現在地',
         zIndex: 1000,
       });
-      const color = cssVar('--dether-me', '#2f6fed');
+      const color = cssVar('--dether-me', '#4285f4');
       this.accuracyCircle = new google.maps.Circle({
         map: this.map,
         center: latLng,
         radius: p.accuracy || 0,
         strokeColor: color,
-        strokeOpacity: 0.4,
+        strokeOpacity: 0.3,
         strokeWeight: 1,
         fillColor: color,
-        fillOpacity: 0.12,
+        fillOpacity: 0.15,
         clickable: false,
       });
     } else {
@@ -324,6 +337,7 @@
       if (!nextIds.has(id)) {
         entry.marker.map = null;
         self.badgeMarkers.delete(id);
+        if (self.selectedId === id) self.selectedId = null;
       }
     });
 
@@ -331,17 +345,27 @@
     badges.forEach(function (badge) {
       const id = String(badge.id);
       if (self.badgeMarkers.has(id)) return;
+      // タップはピンの中のボタンで受ける（marker.addListener('click') は非推奨の警告が出るため）
+      const content = createBadgeElement(badge, function () {
+        self._select(id);
+        self._emit('badge-click', { badge: badge });
+      });
       const marker = new google.maps.marker.AdvancedMarkerElement({
         map: self.map,
         position: { lat: badge.lat, lng: badge.lng },
-        content: createBadgeElement(badge),
-        title: badge.name,
+        content: content,
       });
-      marker.addListener('click', function () {
-        self._emit('badge-click', { badge: badge });
-      });
-      self.badgeMarkers.set(id, { marker: marker, badge: badge });
+      self.badgeMarkers.set(id, { marker: marker, badge: badge, content: content });
     });
+  };
+
+  /** タップしたピンだけ「選択中」の見た目にする */
+  DetherMap.prototype._select = function (id) {
+    const prev = this.badgeMarkers.get(this.selectedId);
+    if (prev) global.DetherBadge.setPinSelected(prev.content, false);
+    const next = this.badgeMarkers.get(id);
+    if (next) global.DetherBadge.setPinSelected(next.content, true);
+    this.selectedId = next ? id : null;
   };
 
   DetherMap.prototype.destroy = function () {

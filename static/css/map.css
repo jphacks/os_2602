@@ -1,11 +1,8 @@
 /* dether マップの見た目。色はここだけで管理する（④が調整） */
 :root {
-  --dether-me: #2f6fed;
-  --dether-loud: #d9480f;
-  --dether-quiet: #2b8a6e;
-  --dether-pin-text: #ffffff;
-  --dether-pin-ring: #ffffff;
-  --dether-pin-night-ring: #1b2340;
+  /* 現在地は Google マップと同じ青。ダーク表示でも同じ（白い縁で地図から浮かせる） */
+  --dether-me: #4285f4;
+  --dether-me-ring: #ffffff;
   --dether-surface: #ffffff;
   --dether-text: #1c1f24;
   --dether-muted: #5d6673;
@@ -13,12 +10,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --dether-me: #6b9bff;
-    --dether-loud: #ff7a3d;
-    --dether-quiet: #4cc9a0;
-    --dether-pin-text: #10131a;
-    --dether-pin-ring: #10131a;
-    --dether-pin-night-ring: #c9d4ff;
     --dether-surface: #1b1f27;
     --dether-text: #eef1f5;
     --dether-muted: #a3adbb;
@@ -31,38 +22,41 @@
   min-height: 320px;
 }
 
-/* 現在地ピン */
+/* 現在地ピン（Google マップと同じ、白い縁の青い点と広がる波紋）
+   AdvancedMarker は中身の「下端の真ん中」を地点に合わせるので、半分下げて点の中心を地点に合わせる */
 .me-pin {
-  width: 18px;
-  height: 18px;
+  position: relative;
+  width: 22px;
+  height: 22px;
+  transform: translateY(50%);
+  pointer-events: none;
+}
+.me-pin__dot {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
   border-radius: 50%;
   background: var(--dether-me);
-  border: 3px solid var(--dether-pin-ring);
-  box-shadow: 0 0 0 1px var(--dether-me);
+  border: 3px solid var(--dether-me-ring);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+.me-pin__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--dether-me);
+  opacity: 0.35;
+  animation: dether-me-pulse 2s ease-out infinite;
+}
+@keyframes dether-me-pulse {
+  from { transform: scale(1); opacity: 0.35; }
+  to { transform: scale(3); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .me-pin__pulse { display: none; }
 }
 
-/* バッジピン：系統で色、時間帯で縁取りを変える */
-.badge-pin {
-  min-width: 36px;
-  height: 36px;
-  padding: 0 6px;
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font: 700 14px/1 system-ui, sans-serif;
-  color: var(--dether-pin-text);
-  background: var(--dether-loud);
-  border: 3px solid var(--dether-pin-ring);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-}
-.badge-pin[data-system='quiet'] {
-  background: var(--dether-quiet);
-}
-.badge-pin[data-band-name='夜'] {
-  border-color: var(--dether-pin-night-ring);
-}
+/* バッジのピンはリーダーの部品（static/css/badge.css の .pin / .medal）を使う */
 
 /* 画面側の部品（デモ用。本番は④のデザインに置き換える） */
 .badge-sheet {
