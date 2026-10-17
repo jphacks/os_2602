@@ -119,6 +119,8 @@ MIDDLEWARE = [
     # これがあるので、フォームに {% csrf_token %} を1行入れるだけで守られる。
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # 見えないアカウント。request.user を使うので AuthenticationMiddleware より後ろに置く
+    "main.middleware.InvisibleAccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

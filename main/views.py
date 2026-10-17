@@ -18,7 +18,7 @@
 # =============================================================================
 
 from django.http import JsonResponse
-from django.shortcuts import render  # noqa: F401
+from django.shortcuts import render
 
 # ★ここから書きはじめる(URLの登録は main/urls.py)
 #
@@ -35,7 +35,6 @@ def health(request):
     """
     return JsonResponse({"status": "ok"})
 
-from django.shortcuts import render
 
 def map_view(request):
     return render(request, "map.html")
