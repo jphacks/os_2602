@@ -24,6 +24,8 @@
   const BAR_EVERY = 2; // level（100msごと）を何回受け取るたびに1本足すか。48本 × 200ms ≒ 10秒
   const RECENT_MAX = 3; // 「最近の記録」に出す件数（main/views.py の RECENT_COUNT と同じ）
   const WARNING_MS = 6000; // 85dBの案内を出しておく時間
+  // 投稿ポップアップ（2日目）ができたら true にして、openPost() を書く。それまで投稿ボタンは隠しておく
+  const POST_READY = false;
 
   const Badge = window.DetherBadge;
   const NAMES = Badge.NAMES;
@@ -79,13 +81,13 @@
   });
   $("survey-stop").addEventListener("click", () => survey.stop());
   $("survey-resume").addEventListener("click", () => survey.resume());
-  $("badge-popup-continue").addEventListener("click", () => {
-    closePopup();
-    survey.resume();
+  // バッジ獲得のポップアップは、✕・背景・Esc のどれで閉じても調査を再開する
+  $("badge-popup-close").addEventListener("click", closePopupAndResume);
+  $("badge-popup").addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closePopupAndResume(); // シートの外（背景）を押したとき
   });
-  $("badge-popup-stop").addEventListener("click", () => {
-    closePopup();
-    survey.stop();
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("badge-popup").hidden) closePopupAndResume();
   });
 
   /* ---------- measure.js からのイベント ---------- */
@@ -228,18 +230,28 @@
     $("badge-popup-medal").replaceChildren(Badge.medal(d.badge, "popup", { isNew: true, band }));
     $("badge-popup-title").textContent = d.name;
     const bandName = d.timeBand ? d.timeBand.name : "";
-    $("badge-popup-note").textContent = bandName ? `${bandName}のバッジとして記録しました` : "記録しました";
     // 企画書：昼の静寂・深い静寂と夜の90dBはレア（判定は badge.js）
-    $("badge-popup-rare").hidden = !(band && Badge.isRare(d.badge, band));
+    const rare = band && Badge.isRare(d.badge, band) ? "（レア）" : "";
+    $("badge-popup-note").textContent = bandName
+      ? `${bandName}のバッジとして地図に記録しました${rare}`
+      : "地図に記録しました";
     const replaced = $("badge-popup-replaced");
     replaced.hidden = !d.replaced;
     if (d.replaced) replaced.textContent = `この場所の${NAMES[d.replaced] || "バッジ"}を上書きしました`;
+
+    $("badge-popup-avg").textContent = fmt1(d.result.avgDb);
+    $("badge-popup-max").textContent = fmt1(d.result.maxDb);
+    $("badge-popup-band").textContent = bandName || "--";
+    $("badge-popup-post").hidden = !POST_READY;
+
     $("badge-popup").hidden = false;
-    $("badge-popup-continue").focus();
+    $("badge-popup-close").focus();
   }
 
-  function closePopup() {
+  // ★survey.resume() はボタンやキーの処理の中で呼ぶ（iPhoneはそうしないとマイクが再開しない）
+  function closePopupAndResume() {
     $("badge-popup").hidden = true;
+    survey.resume();
   }
 
   function showError(message) {

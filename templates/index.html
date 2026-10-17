@@ -165,20 +165,51 @@
   </li>
 </template>
 
-{# ===== バッジ獲得のポップアップ（表示中は measure.js が測定を一時停止している） ===== #}
-<div id="badge-popup" class="badge-popup" role="dialog" aria-modal="true" aria-labelledby="badge-popup-title" hidden>
-  <div class="badge-popup__sheet">
-    <div id="badge-popup-medal" class="badge-popup__medal"></div>
-    <p class="badge-popup__kicker">
-      バッジ獲得！<span id="badge-popup-rare" class="badge-popup__rare" hidden>レア</span>
-    </p>
-    <h2 id="badge-popup-title" class="badge-popup__title"></h2>
-    <p id="badge-popup-note" class="badge-popup__note"></p>
-    <p id="badge-popup-replaced" class="badge-popup__replaced" hidden></p>
-    <div class="badge-popup__actions">
-      <button id="badge-popup-continue" class="d-button d-button--strong" type="button">調査を続ける</button>
-      <button id="badge-popup-stop" class="d-button d-button--ghost" type="button">調査を終える</button>
+{# ===== バッジ獲得のポップアップ（リーダーの badge-preview.html と同じ構成） =====
+   表示中は measure.js が測定を一時停止している。✕・背景・Esc で閉じると調査を再開する。 #}
+<div id="badge-popup" class="badge-popup" hidden>
+  <div class="badge-popup__sheet" role="dialog" aria-modal="true" aria-labelledby="badge-popup-title">
+    <div class="badge-popup__top">
+      <span class="badge-popup__paused">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+          <path d="M8 5v14M16 5v14" />
+        </svg>
+        測定を一時停止中
+      </span>
+      <button id="badge-popup-close" class="badge-popup__close" type="button" aria-label="閉じて調査を再開">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </button>
     </div>
+
+    <div id="badge-popup-medal" class="badge-popup__medal"></div>
+
+    <div class="badge-popup__text">
+      <p class="badge-popup__kicker">バッジ獲得</p>
+      <h2 id="badge-popup-title" class="badge-popup__title"></h2>
+      <p id="badge-popup-note" class="badge-popup__note"></p>
+      <p id="badge-popup-replaced" class="badge-popup__note" hidden></p>
+    </div>
+
+    <dl class="badge-popup__stats">
+      <div>
+        <dt>平均</dt>
+        <dd class="num"><span id="badge-popup-avg">--</span><small> dB</small></dd>
+      </div>
+      <div>
+        <dt>最大</dt>
+        <dd class="num"><span id="badge-popup-max">--</span><small> dB</small></dd>
+      </div>
+      <div>
+        <dt>時間帯</dt>
+        <dd id="badge-popup-band">--</dd>
+      </div>
+    </dl>
+
+    {# 投稿ポップアップ（2日目）ができるまでは隠しておく。survey_page.js の POST_READY で出す #}
+    <button id="badge-popup-post" class="badge-popup__primary" type="button" hidden>音の内容を投稿する</button>
+    <p class="badge-popup__hint">右上の✕で閉じると、そのまま調査を続けます</p>
   </div>
 </div>
 {% endblock %}
