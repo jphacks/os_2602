@@ -8,17 +8,27 @@ from django.db import models
 from django.utils import timezone
 
 # ===== ヒートマップのマス目 =====
-# 緯度経度を約100mのマスに区切る。②地図担当も同じ値で四角形を描く
+# 国の標準地域メッシュ（JIS X 0410）の100mメッシュ（3次メッシュの1/10）を、さらに10等分した約10m四方のマス。
+#   緯度 0.3秒（約9m）× 経度 0.45秒（約11m）
 #   南端 = cell_y * CELL_LAT_DEG / 西端 = cell_x * CELL_LNG_DEG
-CELL_LAT_DEG = Decimal("0.0009")  # 緯度方向 約100m
-CELL_LNG_DEG = Decimal("0.0011")  # 経度方向 日本付近で約100m
+# ★「1度あたりのマスの数」で持つ。0.3秒は割り切れない小数なので、掛け算にすると誤差が出ない
+CELLS_PER_DEG_LAT = 12000
+CELLS_PER_DEG_LNG = 8000
+CELL_LAT_DEG = Decimal(1) / CELLS_PER_DEG_LAT
+CELL_LNG_DEG = Decimal(1) / CELLS_PER_DEG_LNG
+
+# 粗いマスは、10mのマスの番号を割って切り捨てるだけで作れる（保存する列は増やさない）
+#   cell_x // 10  = 標準の100mメッシュ / cell_x // 100 = 標準の3次メッシュ（約1km）
+#   境界は標準メッシュとぴったり一致する（1次〜3次メッシュの幅がどれもマスの整数倍のため）
+CELL_LEVELS = {"10m": 1, "100m": 10, "1km": 100}
 
 
 def to_cell(lat, lng):
-    """緯度経度 → (cell_x, cell_y)"""
-    lat = Decimal(str(lat))
-    lng = Decimal(str(lng))
-    return math.floor(lng / CELL_LNG_DEG), math.floor(lat / CELL_LAT_DEG)
+    """緯度経度 → (cell_x, cell_y)。10mのマスの番号"""
+    return (
+        math.floor(Decimal(str(lng)) * CELLS_PER_DEG_LNG),
+        math.floor(Decimal(str(lat)) * CELLS_PER_DEG_LAT),
+    )
 
 
 # ===== ② 時間帯 =====

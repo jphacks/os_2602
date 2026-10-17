@@ -49,6 +49,9 @@ def site_settings(request) -> dict:
         "SITE_DESCRIPTION": SITE_DESCRIPTION,
         "OGP_IMAGE": OGP_IMAGE,
         "AUTH_ENABLED": settings.AUTH_ENABLED,
+        # 地図(templates/map.html)が使う。値は .env の GOOGLE_MAPS_API_KEY / GOOGLE_MAP_ID
+        "GOOGLE_MAPS_API_KEY": settings.GOOGLE_MAPS_API_KEY,
+        "GOOGLE_MAP_ID": settings.GOOGLE_MAP_ID,
         # 末尾のスラッシュを落としているのは、画像のURLを
         # site_url + "/static/..." と繋ぐときに "//" にならないようにするため。
         "site_url": request.build_absolute_uri("/").rstrip("/"),
