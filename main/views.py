@@ -19,6 +19,7 @@
 
 from collections import Counter
 
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -39,9 +40,13 @@ def index(request):
     """調査ページ（トップ）。調査ボタンと、自分の最近の記録を出す。"""
     recent = []
     if request.user.is_authenticated:
-        measurements = request.user.measurements.select_related("time_band").prefetch_related(
-            "tags", "badges__badge_type"
-        )[:RECENT_COUNT]
+        # タグもバッジも無い記録（「タグなし」になる行）は出さない
+        measurements = (
+            request.user.measurements.filter(Q(badges__isnull=False) | Q(tags__isnull=False))
+            .distinct()
+            .select_related("time_band")
+            .prefetch_related("tags", "badges__badge_type")[:RECENT_COUNT]
+        )
         recent = [_recent_row(m) for m in measurements]
 
     # 投稿シートのタグ（今選べるものだけ）。季節タグは別の枠に出す
@@ -65,7 +70,7 @@ def index(request):
 
 
 def _recent_row(measurement):
-    """「最近の記録」の1行分。タイトルはタグ → バッジ名 → 「タグなし」の順で決める。"""
+    """「最近の記録」の1行分。タイトルはタグ → バッジ名の順で決める（どちらも無い記録は index() で除いている）。"""
     badges = list(measurement.badges.all())
     best = max(badges, key=lambda b: b.badge_type.strength).badge_type if badges else None
     tags = [tag.name for tag in measurement.tags.all()]
