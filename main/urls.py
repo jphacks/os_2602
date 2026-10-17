@@ -17,7 +17,7 @@
 
 from django.urls import path
 
-from main import views
+from main import api_measure, views
 
 # このアプリのURLにまとめて名札を付ける("main:health" のように呼ぶ)。
 app_name = "main"
@@ -28,9 +28,13 @@ urlpatterns = [
     # ★ここから書きはじめる(コメントを外す)
     # path("", views.index, name="index"),
     path("health", views.health, name="health"),
+
+    #↓これは後で消す予定のはずです
+    path("map/", views.map_view, name="map"),
     # --- JavaScript向けにデータを返すURL ---
     #
     # <int:post_id> と書くと、その部分を数字として受け取り、
     # ビューの引数 post_id に渡せる。
     # path("api/posts", api.list_posts, name="api_list_posts"),
+    path("api/measurements", api_measure.create_measurement, name="api_create_measurement"),
 ]
