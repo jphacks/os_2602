@@ -13,8 +13,21 @@ from django.contrib.auth import get_user_model, login
 ADJECTIVES = ["静かな", "にぎやかな", "眠たい", "耳のいい", "夜ふかしの", "早起きの", "のんびりした", "小さな"]
 ANIMALS = ["フクロウ", "コウモリ", "ネコ", "キツネ", "ウサギ", "セミ", "スズメ", "タヌキ"]
 
-# ここで始まるURLではユーザーを作らない（管理画面・管理者ログイン・静的ファイルなど）
-SKIP_PREFIXES = ("/admin", "/accounts", "/static", "/media", "/sw.js", "/favicon.ico")
+# ここで始まるURLではユーザーを作らない（管理画面・管理者ログイン・静的ファイル・生存確認・APIなど）
+# 管理者ログインのURLは /auth/login（config/urls.py で accounts を auth/ に割り当てている）
+# /api/ はセッションなしで来たら作らない。APIの側で401を返す
+SKIP_PREFIXES = (
+    "/admin",
+    "/auth",
+    "/static",
+    "/media",
+    "/sw.js",
+    "/favicon.ico",
+    "/robots.txt",
+    "/health",
+    "/api/",
+    "/__error",
+)
 
 
 def random_username():
@@ -32,7 +45,12 @@ class InvisibleAccountMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if not request.user.is_authenticated and not request.path.startswith(SKIP_PREFIXES):
+        # ユーザーを作るのは画面を開いたとき（GET）だけ
+        if (
+            request.method == "GET"
+            and not request.user.is_authenticated
+            and not request.path.startswith(SKIP_PREFIXES)
+        ):
             User = get_user_model()
             user = User(username=random_username())
             user.set_unusable_password()  # パスワードではログインできないユーザーにする

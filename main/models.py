@@ -144,6 +144,11 @@ class Measurement(models.Model):
         return f"{self.measured_at:%Y-%m-%d %H:%M} {self.avg_db}dB"
 
     def save(self, *args, **kwargs):
+        # JSONのfloatや文字列で来ても Decimal にそろえる（50mルールの計算で落ちないように）
+        for name in ("latitude", "longitude", "gps_accuracy", "avg_db", "max_db"):
+            value = getattr(self, name)
+            if value is not None:
+                setattr(self, name, self._meta.get_field(name).to_python(value))
         # マス目と時間帯は保存時に自動で決める
         self.cell_x, self.cell_y = to_cell(self.latitude, self.longitude)
         if self.time_band_id is None and self.measured_at:
