@@ -28,6 +28,9 @@ urlpatterns = [
     # ★ここから書きはじめる(コメントを外す)
     # path("", views.index, name="index"),
     path("health", views.health, name="health"),
+
+    #↓これは後で消す予定のはずです
+    path("map/", views.map_view, name="map"),
     # --- JavaScript向けにデータを返すURL ---
     #
     # <int:post_id> と書くと、その部分を数字として受け取り、

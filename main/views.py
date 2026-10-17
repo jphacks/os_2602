@@ -34,3 +34,8 @@ def health(request):
     開発中も「画面が出ない…アプリ自体は動いてる?」の切り分けに使える。
     """
     return JsonResponse({"status": "ok"})
+
+from django.shortcuts import render
+
+def map_view(request):
+    return render(request, "map.html")
