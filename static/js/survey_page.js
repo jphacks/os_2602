@@ -79,12 +79,19 @@
   let popupBadge = null;
   let popupRow = null;
 
-  // サーバーが描いた「最近の記録」のメダルを、音の形の模様つきで作り直す（音の形は index.html の data-spectrum）
-  document.querySelectorAll("#recent-list [data-spectrum]").forEach((row) => {
+  // サーバーが描いた「最近の記録」のメダルを、押せるボタンに作り直す（中身は index.html の data-*）
+  document.querySelectorAll("#recent-list [data-badge]").forEach((row) => {
     const old = row.querySelector(".medal");
     if (!old) return;
-    const spectrum = row.dataset.spectrum.split(",").map(Number);
-    old.replaceWith(Badge.medal(row.dataset.badge, "md", { band: row.dataset.band || undefined, spectrum }));
+    const ds = row.dataset;
+    old.replaceWith(recentMedal({
+      badge: ds.badge,
+      avgDb: Number(ds.avg),
+      maxDb: Number(ds.max),
+      at: ds.at,
+      timeBand: ds.band ? { code: ds.band, name: ds.bandName } : null,
+      spectrum: ds.spectrum ? ds.spectrum.split(",").map(Number) : null,
+    }));
   });
 
   /* ---------- ボタン（★survey の操作は必ずボタンの処理の中で呼ぶ。iPhoneの決まり） ---------- */
@@ -95,15 +102,15 @@
   });
   $("survey-stop").addEventListener("click", () => survey.stop());
   $("survey-resume").addEventListener("click", () => survey.resume());
-  // バッジ獲得のポップアップは、✕・背景・Esc のどれで閉じても調査を再開する
-  $("badge-popup-close").addEventListener("click", closePopupAndResume);
+  // バッジ獲得のポップアップは、✕・背景・Esc のどれで閉じても調査を再開する（記録を見ているときは閉じるだけ）
+  $("badge-popup-close").addEventListener("click", closePopup);
   $("badge-popup").addEventListener("click", (e) => {
-    if (e.target === e.currentTarget) closePopupAndResume(); // シートの外（背景）を押したとき
+    if (e.target === e.currentTarget) closePopup(); // シートの外（背景）を押したとき
   });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!$("post-sheet").hidden) backToPopup(); // 投稿シートなら、獲得ポップアップに戻るだけ
-    else if (!$("badge-popup").hidden) closePopupAndResume();
+    else if (!$("badge-popup").hidden) closePopup();
   });
 
   // 投稿シート。★背景を押しても閉じない（書きかけの内容が消えないように）
@@ -254,7 +261,14 @@
       `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, "0")}:` +
       `${String(at.getMinutes()).padStart(2, "0")}` + (timeBand ? `・${timeBand.name}` : "");
     if (badge) {
-      slot("badge").replaceWith(Badge.medal(badge, "md", { band: timeBand && timeBand.code, spectrum: result.spectrum }));
+      slot("badge").replaceWith(recentMedal({
+        badge,
+        avgDb: result.avgDb,
+        maxDb: result.maxDb,
+        at: slot("meta").textContent.split("・")[0],
+        timeBand,
+        spectrum: result.spectrum,
+      }));
     } else {
       slot("badge").remove();
     }
@@ -266,7 +280,44 @@
     return row;
   }
 
+  // 「最近の記録」のメダル。押すと、獲得ポップアップと同じ形でその記録を見せる
+  // rec = { badge, avgDb, maxDb, at（"10/17 18:32"）, timeBand（{ code, name } か null）, spectrum }
+  function recentMedal(rec) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "recent__badge";
+    button.setAttribute("aria-label", `${NAMES[rec.badge]}の記録を見る`);
+    button.append(Badge.medal(rec.badge, "md", { band: rec.timeBand && rec.timeBand.code, spectrum: rec.spectrum }));
+    button.addEventListener("click", () => openRecord(rec));
+    return button;
+  }
+
+  // 記録を見る（調査していないときだけ押せる）。閉じても調査は始めない
+  function openRecord(rec) {
+    const band = rec.timeBand ? rec.timeBand.code : null;
+    $("badge-popup").dataset.mode = "view";
+    $("badge-popup-close").setAttribute("aria-label", "閉じる");
+    $("badge-popup-kicker").textContent = `${rec.at} の記録`;
+    $("badge-popup-medal").replaceChildren(Badge.medal(rec.badge, "popup", { isNew: true, band, spectrum: rec.spectrum }));
+    $("badge-popup-title").textContent = NAMES[rec.badge];
+    const bandName = rec.timeBand ? rec.timeBand.name : "";
+    const rare = band && Badge.isRare(rec.badge, band) ? "（レア）" : "";
+    $("badge-popup-note").textContent = bandName ? `${bandName}のバッジ${rare}` : "";
+    $("badge-popup-replaced").hidden = true;
+    $("badge-popup-avg").textContent = fmt1(rec.avgDb);
+    $("badge-popup-max").textContent = fmt1(rec.maxDb);
+    $("badge-popup-band").textContent = bandName || "--";
+    popupBadge = null;
+    $("badge-popup-post").hidden = true;
+
+    $("badge-popup").hidden = false;
+    $("badge-popup-close").focus();
+  }
+
   function openPopup(d, row) {
+    delete $("badge-popup").dataset.mode;
+    $("badge-popup-close").setAttribute("aria-label", "閉じて調査を再開");
+    $("badge-popup-kicker").textContent = "バッジ獲得";
     const band = d.timeBand ? d.timeBand.code : null; // "d"（昼）/ "n"（夜）
     // ★開くたびに作り直す。そうすると獲得の演出（ポンと出て光が走る）が毎回再生される
     // 数字の後ろの面に、その場の音の形（音の標本）を描く
@@ -296,9 +347,9 @@
   }
 
   // ★survey.resume() はボタンやキーの処理の中で呼ぶ（iPhoneはそうしないとマイクが再開しない）
-  function closePopupAndResume() {
+  function closePopup() {
     $("badge-popup").hidden = true;
-    survey.resume();
+    if ($("badge-popup").dataset.mode !== "view") survey.resume();
   }
 
   /* ---------- 投稿シート ---------- */

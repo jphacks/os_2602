@@ -110,6 +110,20 @@
   border-bottom: 0;
 }
 
+/* メダルを押すと記録を見られる（survey_page.js の recentMedal） */
+.recent__badge {
+  display: flex;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.recent__badge:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .recent__db {
   font-size: 20px;
   font-weight: 600;
@@ -596,6 +610,15 @@
   margin: 0;
   color: var(--ink2);
   font-size: 11px;
+}
+
+/* 「最近の記録」から開いたとき：調査していないので、一時停止の表示と再開の案内は出さない
+   （一時停止の表示は場所を残す。✕ボタンの位置がずれないように） */
+.badge-popup[data-mode="view"] .badge-popup__paused {
+  visibility: hidden;
+}
+.badge-popup[data-mode="view"] .badge-popup__hint {
+  display: none;
 }
 
 /* ===========================================================================
