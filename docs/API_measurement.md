@@ -83,7 +83,8 @@
 - `badge.replaced` は50mルールで地図から外れた自分のバッジのコード。無ければ `null`（獲得ポップアップの「この場所の70dBバッジを上書きしました」に使う）
 - `time_band.code` は `d`（昼）/ `n`（夜）。レアの判定に使う
 - 見えないアカウントをこのリクエストで作ったときだけ `csrf_token` が付く（measure.js が次の送信に使う）
-- ③の保存がマージされるまでは `measurement.id` / `time_band.id` / `user_badge_id` / `replaced` は `null`、`saved` は `false`
+- `badge.code` は BadgeType から作る（大きい音は `b` ＋しきい値、静寂は `q` ＋しきい値）。`time_band.code` は名前が「昼」なら `d`、「夜」なら `n`、それ以外は `t{id}`
+- 管理画面に TimeBand / BadgeType がまだ無い間は、企画書の値で判定だけして返す（`badge.user_badge_id` は `null`。測った時刻がどの時間帯にも入らないと `time_band.id` も `null` になり、バッジは保存されない）
 
 ### エラー
 
