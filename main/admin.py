@@ -30,7 +30,7 @@ class UserBadgeAdmin(admin.ModelAdmin):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ["id", "user_badge", "created_at"]
+    list_display = ["id", "user_badge", "measurement", "created_at"]
 
 
 @admin.register(Tag)
@@ -40,6 +40,7 @@ class TagAdmin(admin.ModelAdmin):
     list_editable = ["is_active", "sort_order"]
     fieldsets = [
         (None, {"fields": ["name", "icon", "tag_type", "is_active", "sort_order"]}),
+        ("音の図鑑（マイページ）", {"fields": ["medal_color", "hint", "description", "is_rare"]}),
         ("季節タグの期間（毎年くり返す。共通タグは空のまま）", {
             "fields": [
                 ("start_month", "start_day", "start_time"),

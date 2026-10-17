@@ -925,3 +925,34 @@ legend.post-field__label {
   font: 700 14px var(--d-font);
   cursor: pointer;
 }
+
+/* ===========================================================================
+   調査中の「直前の音を投稿する」（波形の下）
+   =========================================================================== */
+.live-post {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.live-post__button {
+  background: var(--d-accent-soft);
+  box-shadow: var(--d-raised);
+  color: var(--d-on-accent-soft);
+}
+.live-post__button svg {
+  width: 18px;
+  height: 18px;
+}
+.live-post__button:disabled {
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  color: var(--ink3);
+  cursor: not-allowed;
+}
+.live-post__note {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 11.5px;
+  text-align: center;
+}

@@ -12,6 +12,9 @@
        map, position, content: DetherBadge.pin("b90", { count: 2 }),
      });
 
+     // タグのメダル（音の図鑑など）。tag はサーバーの Tag.medal と同じ { name, icon, color }
+     el.replaceChildren(DetherBadge.tagMedal({ name: "祭り", icon: "祭", color: "shu" }, "list", { spectrum }));
+
      // マイページの1行
      rowEl.replaceWith(DetherBadge.row("d", ["b80", "b70"]));
    ========================================================================== */
@@ -23,6 +26,8 @@
   const NAMES = { b90: "90dBバッジ", b80: "80dBバッジ", b70: "70dBバッジ", q40: "静寂バッジ", q35: "深い静寂バッジ" };
   const RARE  = { q40d: true, q35d: true, b90n: true };        // 昼の静寂・昼の深い静寂・夜の90dB
   const BAND  = { d: "昼", n: "夜" };
+  // タグのメダルの色の組（badge.css の .m-tag-○○。main/models.py の Tag.MedalColor と同じ）
+  const TAG_COLORS = ["sage", "moss", "ai", "shu", "yamabuki", "fuji", "sakura", "sumi"];
   const SIZES = ["popup", "list", "pin", "md", "sm", "xs", "xxs"];
 
   function check(code) {
@@ -264,15 +269,24 @@
     const el = document.createElement("span");
     el.className = `medal ${o.locked ? "m-lock" : "m-" + code} medal--${s}`;
     if (code[0] === "q") el.classList.add("medal--kanji");   // 静・深は明朝体
+    fillMedal(el, MARK[code], s, o);
+    el.dataset.code = code;
+    el.setAttribute("aria-label",
+      `${o.band ? BAND[o.band] + "の" : ""}${NAMES[code]}${o.locked ? "（未獲得）" : ""}`);
+    return el;
+  }
+
+  /** メダルの中身（文字・音の標本・獲得演出）を入れる。medal と tagMedal で共通 */
+  function fillMedal(el, markText, s, o) {
     if (o.spectrum && o.spectrum.length >= 3 && !o.locked) {
       // 模様を数字の後ろ・面の上に重ねるため、数字も要素に入れて重なり順を決める（badge.css）
       el.append(specimen(o.spectrum, s, !!o.isNew));
       const mark = document.createElement("span");
       mark.className = "medal__mark";
-      mark.textContent = MARK[code];
+      mark.textContent = markText;
       el.append(mark);
     } else {
-      el.textContent = MARK[code];
+      el.textContent = markText;
     }
     if (o.isNew) {
       el.classList.add("medal--new");
@@ -281,10 +295,24 @@
       shine.setAttribute("aria-hidden", "true");
       el.append(shine);
     }
-    el.dataset.code = code;
     el.setAttribute("role", "img");
-    el.setAttribute("aria-label",
-      `${o.band ? BAND[o.band] + "の" : ""}${NAMES[code]}${o.locked ? "（未獲得）" : ""}`);
+  }
+
+  /**
+   * タグのメダルを1つ作る（音の図鑑・地図のピン・最近の記録）
+   * @param {Object} tag  { name, icon, color }。サーバーの Tag.medal と同じ形
+   *                      icon … 真ん中の1文字 / color … badge.css の .m-tag-○○ の○○（sage など）
+   * @param {string} [size]  medal と同じ
+   * @param {Object} [opt]   medal と同じ（locked / isNew / spectrum）。locked のときは文字が「?」になる
+   */
+  function tagMedal(tag, size, opt) {
+    const o = opt || {};
+    const s = SIZES.includes(size) ? size : "list";
+    const color = TAG_COLORS.includes(tag.color) ? tag.color : "sage";
+    const el = document.createElement("span");
+    el.className = `medal medal--tag ${o.locked ? "m-lock" : "m-tag-" + color} medal--${s}`;
+    fillMedal(el, o.locked ? "?" : tag.icon || (tag.name || "?").slice(0, 1), s, o);
+    el.setAttribute("aria-label", o.locked ? "まだ出会っていない音" : `${tag.name}のメダル`);
     return el;
   }
 
@@ -292,7 +320,7 @@
    * マップのピン（モックの .pin ＋ .pin-count）
    * AdvancedMarkerElement は content の下端中央を地点に合わせるので、
    * メダルの中心が地点に来るよう外側の要素を半分下げている。
-   * @param {string} code
+   * @param {string|Object} code  バッジのコード。タグのメダルなら { name, icon, color }
    * @param {Object} [opt]
    * @param {number}  [opt.count]     同じ場所のバッジ件数（2以上で右上に表示）
    * @param {boolean} [opt.selected]  選択中の見た目
@@ -300,8 +328,11 @@
    * @param {Function}[opt.onClick]
    */
   function pin(code, opt) {
-    check(code);
+    // タグのメダルのピン：code の代わりに { name, icon, color } を渡す
+    const tag = typeof code === "object" ? code : null;
+    if (!tag) check(code);
     const o = opt || {};
+    const title = tag ? tag.name : NAMES[code];
     const wrap = document.createElement("div");
     wrap.style.transform = "translateY(50%)";
 
@@ -309,8 +340,8 @@
     btn.type = "button";
     btn.className = "pin";
     btn.setAttribute("aria-pressed", o.selected ? "true" : "false");
-    btn.setAttribute("aria-label", o.label || NAMES[code] + (o.count > 1 ? `ほか${o.count - 1}件` : ""));
-    const m = medal(code, "pin");
+    btn.setAttribute("aria-label", o.label || title + (o.count > 1 ? `ほか${o.count - 1}件` : ""));
+    const m = tag ? tagMedal(tag, "pin") : medal(code, "pin");
     m.removeAttribute("role");
     m.setAttribute("aria-hidden", "true");
     btn.append(m);
@@ -375,5 +406,8 @@
     throw new Error(`DetherBadge: 未知の category "${bt.category}"`);
   }
 
-  global.DetherBadge = { CODES, MARK, NAMES, RARE, BAND, isRare, medal, pin, setPinSelected, row, codeFromBadgeType, specimen, plate };
+  global.DetherBadge = {
+    CODES, MARK, NAMES, RARE, BAND, TAG_COLORS,
+    isRare, medal, tagMedal, pin, setPinSelected, row, codeFromBadgeType, specimen, plate,
+  };
 })(window);

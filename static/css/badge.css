@@ -104,6 +104,19 @@
   filter: none;
 }
 
+/* ---------- タグのメダル（badge.js の tagMedal）。色の組は main/models.py の Tag.MedalColor と同じ名前 ----------
+   中の文字はタグのアイコン（「祭」「蝉」など）。丸ゴシックにして、dBバッジ（数字・明朝）と見分けやすくする
+   ★色はリーダーのパレット（深緑・セージ・クリーム）に合わせた仮の値。直すならここだけ */
+.medal--tag { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; }
+.m-tag-sage     { --rim: #8FAE9A; --face: #F1E9D2; --ln: #8FAE9A; --txt: #2F4A40; }
+.m-tag-moss     { --rim: #5E7A45; --face: #EEF0D8; --ln: #5E7A45; --txt: #33461F; }
+.m-tag-ai       { --rim: #3E5F7E; --face: #E8EDEC; --ln: #3E5F7E; --txt: #24384D; }
+.m-tag-shu      { --rim: #C0603F; --face: #F6E6D6; --ln: #C0603F; --txt: #7A2F1C; }
+.m-tag-yamabuki { --rim: #D2A23A; --face: #F8EDCE; --ln: #D2A23A; --txt: #6E4C0E; }
+.m-tag-fuji     { --rim: #8C78A8; --face: #F0EAF2; --ln: #8C78A8; --txt: #4B3C62; }
+.m-tag-sakura   { --rim: #D99AA5; --face: #FAEEEE; --ln: #D99AA5; --txt: #7D3E4A; }
+.m-tag-sumi     { --rim: #3D3F3B; --face: #E9E5DA; --ln: #3D3F3B; --txt: #2B2C29; }
+
 /* ---------- 静・深：明朝体（シャープな字体） ---------- */
 .m-q40, .m-q35, .medal--kanji {
   font-family: 'Noto Serif JP', 'Noto Serif CJK JP', 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'BIZ UDPMincho', serif;
