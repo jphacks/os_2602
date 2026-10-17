@@ -170,6 +170,8 @@ class Measurement(models.Model):
         indexes = [
             models.Index(fields=["measured_at"]),
             models.Index(fields=["cell_x", "cell_y"]),
+            # 地図のバッジAPI（api_badges.my_badges・api_posts.everyone_badges）が緯度・経度の範囲で探すため
+            models.Index(fields=["latitude", "longitude"], name="main_measur_lat_lng_idx"),
         ]
 
     def __str__(self):
