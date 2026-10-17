@@ -28,8 +28,15 @@
     const entry = DATA[slot.dataset.medal];
     const latest = entry && entry.items.find((it) => it.spectrum);
     if (!latest) return; // まだ取っていない・模様の材料が無い（模様ができる前の記録）
-    slot.replaceChildren(Badge.medal(entry.code, "md", { band: entry.band, spectrum: latest.spectrum }));
+    slot.replaceChildren(medalOf(entry, "md", { band: entry.band, spectrum: latest.spectrum }));
   });
+
+  // 図鑑の1つ分のメダル。dBバッジはバッジのメダル、タグはタグのメダル（色はタグごと）
+  function medalOf(entry, size, opt) {
+    return entry.kind === "tag"
+      ? Badge.tagMedal(entry.tag, size, opt)
+      : Badge.medal(entry.code, size, opt);
+  }
 
   /* ---------- 2. 時間帯の絞り込み ---------- */
   const tabs = document.querySelectorAll(".band-tabs__tab");
@@ -110,9 +117,8 @@
   }
 
   /**
-   * 上の大きな見た目を描く。item が null なら模様なし（開いたとき）、標本なら その模様で描く
-   *   dBバッジ … 大きなメダル
-   *   タグ     … 丸いアイコン。標本を選んだときは、その標本のメダル
+   * 上の大きなメダルを描く。item が null なら模様なし（開いたとき）、標本なら その模様で描く
+   *   dBバッジはバッジのメダル、タグはタグのメダル
    */
   function showHero(item) {
     const d = current;
@@ -120,25 +126,18 @@
     const visual = $("zukan-sheet-visual");
     const picked = $("zukan-sheet-picked");
 
-    if (item && item.code) {
+    if (item) {
       // ★作り直すと、砂が模様にまとまっていく演出（isNew）が毎回再生される
-      visual.replaceChildren(
-        Badge.medal(item.code, "popup", { band: item.band, spectrum: item.spectrum, isNew: true })
-      );
-    } else if (d.kind === "badge") {
-      visual.replaceChildren(Badge.medal(d.code, "popup", { band: d.band, locked: !got }));
+      visual.replaceChildren(medalOf(d, "popup", { band: item.band, spectrum: item.spectrum, isNew: true }));
     } else {
-      const icon = document.createElement("span");
-      icon.className = "zukan-sheet__icon" + (got ? "" : " zukan-sheet__icon--locked");
-      icon.textContent = got ? d.icon : "?";
-      visual.replaceChildren(icon);
+      visual.replaceChildren(medalOf(d, "popup", { band: d.band, locked: !got }));
     }
 
     picked.hidden = !item;
     picked.textContent = item ? `${item.at}・${item.avg_db.toFixed(1)} dB の音` : "";
   }
 
-  // 標本1つ分：模様入りのメダル（バッジが無い測定はタグのアイコン）と、日時・dB。押すと上に大きく出す
+  // 標本1つ分：模様入りのメダルと、日時・dB。押すと上に大きく出す
   function specimenItem(it, d) {
     const li = document.createElement("li");
     const btn = document.createElement("button");
@@ -146,14 +145,7 @@
     btn.className = "specimen";
     btn.setAttribute("aria-pressed", "false");
     btn.setAttribute("aria-label", `${it.at}・${it.avg_db.toFixed(1)} dB の標本を大きく見る`);
-    if (it.code) {
-      btn.append(Badge.medal(it.code, "list", { band: it.band, spectrum: it.spectrum }));
-    } else {
-      const icon = document.createElement("span");
-      icon.className = "specimen__icon";
-      icon.textContent = d.icon || "?";
-      btn.append(icon);
-    }
+    btn.append(medalOf(d, "list", { band: it.band, spectrum: it.spectrum }));
     const db = document.createElement("span");
     db.className = "specimen__db num";
     db.textContent = `${it.avg_db.toFixed(1)} dB`;

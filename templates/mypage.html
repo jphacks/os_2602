@@ -105,7 +105,14 @@
       <li>
         <button class="zukan__item{% if card.collected %} zukan__item--collected{% endif %}" type="button" data-key="{{ card.key }}">
           <span class="zukan__no num">No.{{ card.number|stringformat:"03d" }}</span>
-          <span class="zukan__icon" aria-hidden="true">{% if card.collected %}{{ card.icon }}{% else %}?{% endif %}</span>
+          {# タグのメダル（色は管理画面の「メダルの色」）。音の模様は mypage.js が描き足す #}
+          <span class="zukan__medal" data-medal="{{ card.key }}">
+            {% if card.collected %}
+            <span class="medal medal--tag m-tag-{{ card.color }} medal--md" role="img" aria-label="{{ card.tag.name }}のメダル">{{ card.icon }}</span>
+            {% else %}
+            <span class="medal medal--tag m-lock medal--md" role="img" aria-label="まだ出会っていない音">?</span>
+            {% endif %}
+          </span>
           <span class="zukan__text">
             <span class="zukan__name">{% if card.collected %}{{ card.tag.name }}{% else %}？？？{% endif %}</span>
             <span class="zukan__period">

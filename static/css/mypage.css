@@ -207,25 +207,6 @@
   flex: none;
 }
 
-/* タグの丸いアイコン */
-.zukan__icon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1.5px dashed var(--ink3);
-  border-radius: 50%;
-  color: var(--ink3);
-  font-size: 15px;
-  font-weight: 700;
-}
-.zukan__item--collected .zukan__icon {
-  border: 0;
-  background: var(--d-accent-soft);
-  color: var(--d-on-accent-soft);
-}
-
 .zukan__text {
   display: flex;
   flex: 1;
@@ -263,7 +244,7 @@
   font-size: 9px;
   letter-spacing: 0.04em;
 }
-.zukan__no ~ .zukan__icon,
+.zukan__no ~ .zukan__medal,
 .zukan__no ~ .zukan__text {
   margin-top: 8px;
 }
@@ -367,25 +348,6 @@
   justify-content: center;
   margin-bottom: 12px;
 }
-/* タグの大きなアイコン */
-.zukan-sheet__icon {
-  display: grid;
-  place-items: center;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: var(--d-accent-soft);
-  box-shadow: var(--d-raised);
-  color: var(--d-on-accent-soft);
-  font-size: 38px;
-  font-weight: 700;
-}
-.zukan-sheet__icon--locked {
-  border: 2px dashed var(--ink3);
-  background: var(--d-bg);
-  box-shadow: var(--d-inset);
-  color: var(--ink3);
-}
 /* 選んだ標本の日時と dB */
 .zukan-sheet__picked {
   margin: -4px 0 8px;
@@ -486,18 +448,6 @@
 }
 .specimen .medal {
   margin-bottom: 3px;
-}
-.specimen__icon {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 3px;
-  border-radius: 50%;
-  background: var(--d-accent-soft);
-  color: var(--d-on-accent-soft);
-  font-size: 18px;
-  font-weight: 700;
 }
 .specimen__db {
   font-size: 11.5px;

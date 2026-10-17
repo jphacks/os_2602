@@ -60,6 +60,9 @@
           </span>
           {% if row.badge %}
           {% include "components/badge.html" with code=row.badge.code size="md" %}
+          {% elif row.tag %}
+          {# バッジの無い投稿は、タグのメダル（badge.css の .m-tag-○○） #}
+          <span class="medal medal--tag m-tag-{{ row.tag.color }} medal--md" role="img" aria-label="{{ row.tag.name }}のメダル">{{ row.tag.icon }}</span>
           {% endif %}
         </li>
         {% endfor %}
@@ -105,6 +108,18 @@
     </div>
 
     <div id="wave" class="d-card wave" aria-hidden="true"></div>
+
+    {# 直前の測定（10秒の区間）に、タグや写真を付けて投稿する。押すと一時停止して投稿シートを開く #}
+    <div class="live-post">
+      <button id="live-post" class="d-button live-post__button" type="button" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12V4h8l10 10-8 8z" />
+          <circle cx="7.5" cy="8.5" r="1.5" />
+        </svg>
+        <span id="live-post-label">直前の音を投稿する</span>
+      </button>
+      <p id="live-post-note" class="live-post__note">測定が1回終わると投稿できます</p>
+    </div>
 
     <div class="d-card session">
       <div class="session__head">
@@ -248,7 +263,7 @@
         {% if post_tags %}
         <div class="tag-chips">
           {% for tag in post_tags %}
-          <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}">
+          <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}" data-icon="{{ tag.medal.icon }}" data-color="{{ tag.medal.color }}">
             <span class="tag-chip__icon" aria-hidden="true">{{ tag.icon|default:tag.name|slice:":1" }}</span>{{ tag.name }}
           </button>
           {% endfor %}
@@ -262,7 +277,7 @@
           <p class="post-season__label">季節タグ<span>{{ post_seasonal_note }}</span></p>
           <div class="tag-chips">
             {% for tag in post_seasonal %}
-            <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}">
+            <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}" data-icon="{{ tag.medal.icon }}" data-color="{{ tag.medal.color }}">
               <span class="tag-chip__icon" aria-hidden="true">{{ tag.icon|default:tag.name|slice:":1" }}</span>{{ tag.name }}
             </button>
             {% endfor %}

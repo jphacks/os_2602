@@ -89,11 +89,13 @@ def _recent_row(measurement):
     """「最近の記録」の1行分。タイトルはタグ → バッジ名の順で決める（どちらも無い記録は index() で除いている）。"""
     badges = list(measurement.badges.all())
     best = max(badges, key=lambda b: b.badge_type.strength).badge_type if badges else None
-    tags = [tag.name for tag in measurement.tags.all()]
+    tags = list(measurement.tags.all())
     return {
         "measurement": measurement,
-        "title": "・".join(tags) or (best.name if best else "タグなし"),
+        "title": "・".join(t.name for t in tags) or (best.name if best else "タグなし"),
         "badge": best,  # バッジの見た目は templates/components/badge.html に best.code を渡して描く
+        # バッジの無い記録（調査中の「直前の音を投稿」）は、1つ目のタグのメダルで出す
+        "tag": tags[0].medal if tags and not best else None,
     }
 
 
@@ -171,6 +173,7 @@ def mypage(request):
         card = {
             "key": key,
             "tag": tag,
+            "color": tag.medal["color"],
             "number": number,
             "icon": tag.icon or tag.name[:1],
             "count": len(met),
@@ -187,6 +190,7 @@ def mypage(request):
             "kind": "tag",
             "number": number,
             "icon": card["icon"],
+            "tag": tag.medal,  # badge.js の tagMedal() に渡す { name, icon, color }
             # まだ出会っていないものは、名前も説明も渡さない（ページのソースから分からないように）
             "title": tag.name if met else "？？？",
             "chips": chips,
@@ -227,7 +231,7 @@ def _specimen(user_badge):
 
 
 def _specimen_of(measurement):
-    """タグを付けた測定1つ分。バッジがあれば一番強いバッジの見た目で、無ければタグのアイコンで出す"""
+    """タグを付けた測定1つ分。見た目はそのタグのメダル（mypage.js）に、この測定の音の模様を描く"""
     badges = list(measurement.badges.all())
     best = max(badges, key=lambda b: b.badge_type.strength) if badges else None
     return {

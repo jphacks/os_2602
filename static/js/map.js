@@ -39,17 +39,18 @@
 
   /**
    * 重なったときに上に出すバッジの決め方（上から順に比べる）
-   *  1. レア（昼の静寂・昼の深い静寂・夜の90dB）
+   *  1. レア（昼の静寂・昼の深い静寂・夜の90dB。タグのメダルなら、管理画面で「レア」にしたタグ）
    *  2. 投稿がある（写真や内容が見られる）
-   *  3. 取りにくさ … 深い静寂 > 90dB > 静寂 > 80dB > 70dB
+   *  3. 取りにくさ … 深い静寂 > 90dB > 静寂 > 80dB > 70dB > タグのメダル（バッジの無い投稿）
    *  4. 新しい
    */
   const PIN_STRENGTH = { q35: 5, b90: 4, q40: 3, b80: 2, b70: 1 };
   function pinPriority(badge) {
     const code = badgeCode(badge);
     const band = badge.time_band_code || (badge.time_band_name === '夜' ? 'n' : 'd');
+    const rare = code ? global.DetherBadge.isRare(code, band) : !!badge.rare_tag;
     return [
-      global.DetherBadge.isRare(code, band) ? 1 : 0,
+      rare ? 1 : 0,
       badge.post ? 1 : 0,
       PIN_STRENGTH[code] || 0,
       Date.parse(badge.measured_at) || 0,
@@ -132,7 +133,9 @@
 
   /* ---------- マーカーの中身 ---------- */
   // バッジのコード（b90 / b80 / b70 / q40 / q35）。APIは code を返す。無いとき（ダミーデータ）は系統としきい値から作る
+  // バッジの無い投稿（kind: 'tag'）は null。見た目はタグのメダル（badge.tag）
   function badgeCode(badge) {
+    if (badge.kind === 'tag') return null;
     if (badge.code) return badge.code;
     if (badge.system === 'quiet') return Number(badge.threshold_db) <= 35 ? 'q35' : 'q40';
     return 'b' + Math.round(Number(badge.threshold_db));
@@ -143,7 +146,7 @@
   // count が2以上なら、右上に件数が出る（重なってまとめたピン）
   function createBadgeElement(badge, count, onClick) {
     const name = (badge.time_band_name ? badge.time_band_name + 'の' : '') + badge.name;
-    return global.DetherBadge.pin(badgeCode(badge), {
+    return global.DetherBadge.pin(badge.kind === 'tag' ? badge.tag : badgeCode(badge), {
       count: count,
       label: count > 1 ? name + 'ほか' + (count - 1) + '件' : name,
       onClick: onClick,
