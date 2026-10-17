@@ -47,10 +47,15 @@
     popup: [2600, 1.3], list: [800, 1], pin: [720, 1], md: [420, 0.9],
     sm: [380, 0.9], xs: [320, 0.8], xxs: [280, 0.8],
   };
+  // サイズごとに、板のどこまでを見せるか（1 = 板全体）。小さいメダルで全体を描くと線が詰まって潰れるので、
+  // 中央を拡大して見せる（同じ音なら、大きいメダルの模様の真ん中と同じ形になる）
+  const VIEW = { popup: 1, list: 0.7, pin: 0.7, md: 0.5, sm: 0.5, xs: 0.5, xxs: 0.5 };
   const SETTLE_STEPS = 45; // 砂が模様にまとまるまでの回数（獲得演出では1回＝1コマ、約0.8秒）
 
-  /** 音の形 → 板の揺れの大きさ f(x, y)。x, y は -1〜1。f = 0 のところが節（砂が集まる線） */
-  function chladniField(spectrum) {
+  /** 音の形 → 板の揺れの大きさ f(x, y)。x, y は -1〜1。f = 0 のところが節（砂が集まる線）
+      view は板のどこまでを見せるか（VIEW）。1 より小さいと中央を拡大する */
+  function chladniField(spectrum, view) {
+    const z = view || 1;
     const top = spectrum
       .map((v, i) => [Number(v) || 0, i])
       .sort((a, b) => b[0] - a[0])
@@ -59,9 +64,9 @@
     const modes = top.map(([v, i]) => {
       const [n, m] = CHLADNI_MODES[i % CHLADNI_MODES.length];
       // 帯ごとに重ね方の向き（＋／−）を変える。全部「−」だと、どの音でも対角線に同じ×が出てしまうため
-      return { n: n * Math.PI, m: m * Math.PI, a: v * v, sign: i % 2 === 0 ? -1 : 1 };
+      return { n: n * Math.PI * z, m: m * Math.PI * z, a: v * v, sign: i % 2 === 0 ? -1 : 1 };
     });
-    if (!modes.length) modes.push({ n: Math.PI, m: 2 * Math.PI, a: 1, sign: -1 });
+    if (!modes.length) modes.push({ n: Math.PI * z, m: 2 * Math.PI * z, a: 1, sign: -1 });
     return function (x, y) {
       let f = 0;
       for (const d of modes) {
@@ -119,7 +124,7 @@
     canvas.width = canvas.height = side;
     canvas.setAttribute("aria-hidden", "true");
 
-    const f = chladniField(spectrum);
+    const f = chladniField(spectrum, VIEW[size]);
     const rand = seededRandom(spectrum);
     const points = [];
     for (let k = 0; k < count; k++) { // 円の中に均一にまく

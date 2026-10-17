@@ -49,8 +49,8 @@
     <div class="d-card recent-card">
       <ul id="recent-list" class="recent">
         {% for row in recent %}
-        {# 音の形があれば、survey_page.js がメダルを模様つきで作り直す #}
-        <li class="recent__row"{% if row.badge and row.measurement.spectrum %} data-badge="{{ row.badge.code }}" data-band="{{ row.measurement.time_band.code|default:'' }}" data-spectrum="{{ row.measurement.spectrum|join:',' }}"{% endif %}>
+        {# バッジのある行は、survey_page.js がメダルを押せるボタン（音の形があれば模様つき）に作り直す。押すと獲得ポップアップの形で記録を見せる #}
+        <li class="recent__row"{% if row.badge %} data-badge="{{ row.badge.code }}" data-avg="{{ row.measurement.avg_db }}" data-max="{{ row.measurement.max_db }}" data-at="{{ row.measurement.measured_at|date:'n/j H:i' }}" data-band="{{ row.measurement.time_band.code|default:'' }}" data-band-name="{{ row.measurement.time_band.name|default:'' }}" data-spectrum="{{ row.measurement.spectrum|join:',' }}"{% endif %}>
           <span class="recent__db num">{{ row.measurement.avg_db|floatformat:1 }}<small>dB</small></span>
           <span class="recent__body">
             <span class="recent__title">{{ row.title }}</span>
@@ -169,6 +169,7 @@
 {% comment %}
   ===== バッジ獲得のポップアップ（リーダーの badge-preview.html と同じ構成） =====
   表示中は measure.js が測定を一時停止している。✕・背景・Esc で閉じると調査を再開する。
+  「最近の記録」のバッジを押したときも、これを data-mode="view" で開く（記録を見るだけ。閉じても調査は始めない）。
   ★{# #} は1行のコメント専用。2行以上にまたがると画面にそのまま出てしまうので {% comment %} を使う。
 {% endcomment %}
 <div id="badge-popup" class="badge-popup" hidden>
@@ -190,7 +191,7 @@
     <div id="badge-popup-medal" class="badge-popup__medal"></div>
 
     <div class="badge-popup__text">
-      <p class="badge-popup__kicker">バッジ獲得</p>
+      <p id="badge-popup-kicker" class="badge-popup__kicker">バッジ獲得</p>
       <h2 id="badge-popup-title" class="badge-popup__title"></h2>
       <p id="badge-popup-note" class="badge-popup__note"></p>
       <p id="badge-popup-replaced" class="badge-popup__note" hidden></p>
