@@ -49,7 +49,8 @@
     <div class="d-card recent-card">
       <ul id="recent-list" class="recent">
         {% for row in recent %}
-        <li class="recent__row">
+        {# 音の形があれば、survey_page.js がメダルを模様つきで作り直す #}
+        <li class="recent__row"{% if row.badge and row.measurement.spectrum %} data-badge="{{ row.badge.code }}" data-band="{{ row.measurement.time_band.code|default:'' }}" data-spectrum="{{ row.measurement.spectrum|join:',' }}"{% endif %}>
           <span class="recent__db num">{{ row.measurement.avg_db|floatformat:1 }}<small>dB</small></span>
           <span class="recent__body">
             <span class="recent__title">{{ row.title }}</span>

@@ -35,6 +35,7 @@ MAX_GPS_ACCURACY_M = 500  # これより精度が悪い位置は地図を乱す�
 MAX_CLOCK_SKEW = timedelta(minutes=10)  # 端末の時計がこれ以上ずれていたらサーバーの時刻を使う
 JUDGES = ("loud", "quiet")  # 判定してほしい区間の種類（null は通常の記録）
 JUDGE_EPS = 0.2  # 区間の長さの、ほんの少しの足りなさは許す（100msごとに測るため）
+SPECTRUM_BANDS = 16  # 音の形の帯の数（measure.js の spectrumBands と同じ）
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ class MeasurementInput:
     longitude: float
     gps_accuracy: float  # メートル
     measured_at: datetime  # タイムゾーン付き
+    spectrum: list[float] | None = None  # 音の形（0〜1 が16個）。無い・壊れているときは None
 
 
 # --- 受け取り口 ---------------------------------------------------------------
@@ -123,7 +125,20 @@ def parse_measurement(data: dict) -> tuple[MeasurementInput | None, str | None]:
         longitude=lng,
         gps_accuracy=round(accuracy, 1),
         measured_at=_parse_time(data.get("measured_at")),
+        spectrum=_parse_spectrum(data.get("spectrum")),
     ), None
+
+
+def _parse_spectrum(value) -> list[float] | None:
+    """音の形。模様に使うだけなので、形が正しくなければ断らずに捨てる（測定は記録する）"""
+    if not isinstance(value, list) or len(value) != SPECTRUM_BANDS:
+        return None
+    out = []
+    for v in value:
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not (0 <= v <= 1):
+            return None
+        out.append(round(float(v), 2))
+    return out
 
 
 def _number(data: dict, key: str, lo: float, hi: float, default: float | None = None) -> float:

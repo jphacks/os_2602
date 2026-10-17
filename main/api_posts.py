@@ -188,6 +188,7 @@ def post_badge_dict(ub: UserBadge, viewer=None) -> dict:
         "avg_db": float(m.avg_db),
         "max_db": float(m.max_db),
         "measured_at": m.measured_at.isoformat(),
+        "spectrum": m.spectrum,  # 音の形（badge.js の medal の opt.spectrum に渡す）。古い記録は null
         "mine": viewer is not None and ub.user_id == viewer.id,
         "tags": [{"id": t.id, "name": t.name, "icon": tag_icon(t)} for t in m.tags.all()],
         "post": (
