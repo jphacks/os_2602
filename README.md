@@ -5,9 +5,7 @@
 ## 各種リンク
 
 - **アプリURL**: https://dether.mrrn.jp/
-- スライドURL: 未掲載（URL確認後に追加）
 - デモ動画URL: [デモ動画（MP4）](docs/readme-assets/demo.mp4)
-- AwardDayスライドURL: 未掲載（URL確認後に追加）
 
 ### アプリ QR コード
 
