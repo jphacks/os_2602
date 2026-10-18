@@ -510,6 +510,12 @@
   font-weight: 700;
   letter-spacing: 0.08em;
 }
+/* まだ解放していないときのヒント（名前のかわりの手がかり） */
+.legend__hint {
+  color: var(--d-muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
 .legend__reqs {
   display: flex;
   flex-wrap: wrap;
@@ -555,29 +561,37 @@
   scroll-snap-stop: always; /* 勢いよくスワイプしても1ページずつ止まる */
 }
 
+/* 見出しの右に置く、小さなページめくり（‹ 点 1/4 ›） */
+.zukan-head {
+  align-items: center;
+}
+.zukan-head__note {
+  margin: 2px 0 0;
+  color: var(--d-muted);
+  font-size: 11px;
+}
 .zukan-pager {
   display: flex;
+  flex: none;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 6px;
 }
 .zukan-pager__btn {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: 1px solid var(--d-edge);
   border-radius: 50%;
   background: var(--d-surface);
-  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
+  box-shadow: 2px 2px 5px var(--d-shadow-dark), -2px -2px 5px var(--d-shadow-light);
   color: var(--d-text);
   cursor: pointer;
 }
 .zukan-pager__btn svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
 }
 .zukan-pager__btn:disabled {
   box-shadow: none;
@@ -587,11 +601,11 @@
 }
 .zukan-pager__dots {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 .zukan-pager__dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
   background: var(--d-track);
   transition:
@@ -599,12 +613,14 @@
     background 0.25s ease;
 }
 .zukan-pager__dot.is-current {
-  width: 18px;
+  width: 14px;
   background: var(--d-accent);
 }
 .zukan-pager__no {
+  min-width: 2.6em;
   color: var(--d-muted);
-  font-size: 11.5px;
+  font-size: 10.5px;
+  text-align: center;
 }
 
 /* レジェンドのシートの「必要な音」（押せない） */

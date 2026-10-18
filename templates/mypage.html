@@ -112,7 +112,9 @@
           <span class="medal medal--tag m-lock medal--list" role="img" aria-label="まだ解放していないレジェンド">?</span>
           {% endif %}
           <span class="legend__body">
+            {# 名前は解放するまで「？？？」。まだのときは、かわりにヒントを小さく出す #}
             <span class="legend__name">{{ card.name }}</span>
+            {% if not card.unlocked %}<span class="legend__hint">{{ card.hint }}</span>{% endif %}
             {# 必要なタグ。集めたものは色つき、まだのものは「?」 #}
             <span class="legend__reqs" aria-label="{{ card.need }}個中{{ card.have }}個集めた">
               {% for req in card.reqs %}
@@ -134,9 +136,26 @@
 
   {# ===== 音の図鑑（8個ずつのページ。横にスワイプか ‹ › でめくる。mypage.js） ===== #}
   <section class="d-card mypage-section">
-    <div class="mypage-section__head">
-      <h2 class="mypage-section__title">音の図鑑</h2>
-      <span class="mypage-section__note">投稿でタグを選ぶと登録</span>
+    {# 見出しの右に、ページめくり（‹ 点 1/4 ›）。説明は見出しの下に小さく #}
+    <div class="mypage-section__head zukan-head">
+      <div>
+        <h2 class="mypage-section__title">音の図鑑</h2>
+        <p class="zukan-head__note">投稿でタグを選ぶと登録</p>
+      </div>
+      {% if tag_pages|length > 1 %}
+      <div class="zukan-pager">
+        <button id="zukan-prev" class="zukan-pager__btn" type="button" aria-label="前のページ" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+        </button>
+        <span class="zukan-pager__dots" aria-hidden="true">
+          {% for page in tag_pages %}<span class="zukan-pager__dot{% if forloop.first %} is-current{% endif %}"></span>{% endfor %}
+        </span>
+        <span id="zukan-page-no" class="zukan-pager__no num" aria-live="polite">1 / {{ tag_pages|length }}</span>
+        <button id="zukan-next" class="zukan-pager__btn" type="button" aria-label="次のページ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+        </button>
+      </div>
+      {% endif %}
     </div>
     {% if tag_pages %}
     <div id="zukan-pages" class="zukan-pages" tabindex="0" aria-label="音の図鑑のページ。左右にスワイプでめくる">
@@ -169,20 +188,6 @@
       </ul>
       {% endfor %}
     </div>
-    {% if tag_pages|length > 1 %}
-    <div class="zukan-pager">
-      <button id="zukan-prev" class="zukan-pager__btn" type="button" aria-label="前のページ" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
-      </button>
-      <span class="zukan-pager__dots" aria-hidden="true">
-        {% for page in tag_pages %}<span class="zukan-pager__dot{% if forloop.first %} is-current{% endif %}"></span>{% endfor %}
-      </span>
-      <span id="zukan-page-no" class="zukan-pager__no num" aria-live="polite">1 / {{ tag_pages|length }}</span>
-      <button id="zukan-next" class="zukan-pager__btn" type="button" aria-label="次のページ">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
-      </button>
-    </div>
-    {% endif %}
     {% else %}
     <p class="mypage-empty">タグはまだ登録されていません</p>
     {% endif %}
