@@ -251,6 +251,14 @@
 
     {# 投稿できるバッジ（サーバーに保存できたもの）のときだけ survey_page.js が出す #}
     <button id="badge-popup-post" class="badge-popup__primary" type="button" hidden>音の内容を投稿する</button>
+    {# 文面入りの href は survey_page.js の setShare() が開くたびに入れる。別のタブで開くので調査は一時停止のまま #}
+    <a id="badge-popup-share" class="badge-popup__share" href="https://bsky.app/" target="_blank" rel="noopener" aria-label="Blueskyでシェア（別のタブで開きます）">
+      Blueskyでシェア
+      {# 外部のサイトへ移ることを示す印 #}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+      </svg>
+    </a>
     <p class="badge-popup__hint">右上の✕で閉じると、そのまま調査を続けます</p>
   </div>
 </div>
