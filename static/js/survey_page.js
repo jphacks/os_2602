@@ -475,9 +475,12 @@
   // 「Blueskyでシェア」。bsky.app の投稿画面を、文面を入れた状態で開く（ログインも送信もBluesky側）
   // ★文面の #dether とURLは、Blueskyの投稿画面がタグとリンクにしてくれる
   function setShare(badge, avgDb, bandName) {
+    // ★ボタンが無くても獲得ポップアップは必ず出す（ここで止まるとポップアップごと出なくなる）
+    const link = $("badge-popup-share");
+    if (!link) return;
     const detail = [`平均 ${fmt1(avgDb)} dB`, bandName].filter(Boolean).join("・");
     const text = `dether で「${NAMES[badge]}」を獲得しました！（${detail}）\n#dether\n${location.origin}/`;
-    $("badge-popup-share").href = `https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`;
+    link.href = `https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`;
   }
 
   // ★survey.resume() はボタンやキーの処理の中で呼ぶ（iPhoneはそうしないとマイクが再開しない）
