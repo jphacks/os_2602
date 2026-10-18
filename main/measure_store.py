@@ -108,6 +108,7 @@ def save_measurement(user, m: MeasurementInput, time_band: TimeBandInfo) -> int 
         max_db=Decimal(str(m.max_db)),
         duration_seconds=max(1, round(m.duration_seconds)),  # 列が整数なので四捨五入（判定は送られた値で済んでいる）
         spectrum=m.spectrum,
+        is_indoor=m.indoor,
         time_band_id=time_band.id,
         measured_at=m.measured_at,
     )

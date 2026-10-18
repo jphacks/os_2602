@@ -150,9 +150,13 @@
   font: 500 13px var(--d-font);
   cursor: pointer;
 }
+/* 選んでいるタブの背景は、スライドする .seg（app.css）が描く */
+.band-tabs {
+  --seg-pad: 4px;
+  --seg-gap: 4px;
+  --seg-radius: 12px;
+}
 .band-tabs__tab[aria-selected="true"] {
-  background: var(--d-surface);
-  box-shadow: 3px 3px 7px var(--d-shadow-dark), -3px -3px 7px var(--d-shadow-light);
   color: var(--d-text);
   font-weight: 700;
 }

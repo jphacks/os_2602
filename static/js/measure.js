@@ -262,6 +262,7 @@
       this.meter = new DetherMeter({ calibration: o.calibration, simulate: o.simulate });
       this.send = o.send === undefined ? defaultSend : o.send;
       this.useLocation = o.useLocation !== false;
+      this.indoor = !!o.indoor; // 屋内で測っているか。送る記録に付ける（setIndoor で切り替える）
       this.timeScale = Number(o.timeScale) > 0 ? Number(o.timeScale) : 1;
 
       this.state = "idle";
@@ -324,6 +325,17 @@
         return;
       }
       this._run();
+    }
+
+    /**
+     * 屋外／屋内を切り替える。調査中なら、測りかけの区間は捨てて測り直す
+     * （屋外の音と屋内の音が1つの記録に混ざらないように）
+     */
+    setIndoor(indoor) {
+      const next = !!indoor;
+      if (next === this.indoor) return;
+      this.indoor = next;
+      if (this.state === "measuring") this._run();
     }
 
     /** 画面側の都合で止めたいとき（例：投稿ポップアップを開く）。マイクも止まる */
@@ -553,6 +565,7 @@
         gps_accuracy: pos.accuracy,
         measured_at: isoLocal(result.endedAt),
         spectrum: result.spectrum, // 音の形。後からバッジの模様を描くために保存する
+        indoor: this.indoor, // 屋外／屋内（ヒートマップで使う）
       };
 
       let response;

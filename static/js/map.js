@@ -6,6 +6,8 @@
  *     ローカル（scope: 'mine'）     … 自分の獲得バッジ（/api/badges/mine/）
  *     全国（scope: 'everyone'）    … みんなの「投稿のある」バッジ（/api/badges/everyone/）
  * - 表示範囲のヒートマップ（マスごとの平均dBの色と、代表タグのアイコン）を /api/heatmap から取得して表示
+ *     マスはいつでも約50m。1枚のキャンバス（HeatLayer）にまとめて描くので、マスが多くても軽い
+ *     測っていないマスは、近くの屋外の記録から推定してうすく塗る（屋内の記録は広げない）
  * - ピンが重なるところは1つにまとめ、右上に件数を出す。どのバッジを上に出すかは PIN_PRIORITY
  *
  * 企画書のルールに合わせた設計:
@@ -36,6 +38,12 @@
   const TAG_MIN_CELL_PX = 30;
   // ヒートマップの色の段階（map.css の --heat-1 〜 --heat-7）。この dB 未満なら その段階
   const HEAT_STEPS = [40, 50, 60, 70, 80, 90];
+  // ヒートマップのなじませ方
+  const HEAT_ALPHA = 0.72; // 測ったマスの濃さ
+  const HEAT_SPREAD = 2; // 屋外の記録を、何マス先（1マス約50m）までなじませるか
+  const HEAT_FADE = 1.6; // なじませる強さ。大きいほど遠くまで濃く残る
+  const HEAT_EST_MAX = 0.85; // 推定したマスの濃さの上限（測ったマスより必ずうすくする）
+  const HEAT_GAP_MIN_PX = 8; // マスがこれより大きく見えるときだけ、マスの間にすき間を入れる
 
   /**
    * 重なったときに上に出すバッジの決め方（上から順に比べる）
@@ -223,28 +231,174 @@
     return out;
   }
 
+  // 50mのマスで、まん中あたりにダミーの測定を置く（屋内だけのマスも混ぜる）
   function mockHeatmap(bounds) {
-    const cells = [];
+    const cellDeg = { lat: 5 / 12000, lng: 5 / 8000 };
+    const cx = Math.floor((bounds.west + bounds.east) / 2 / cellDeg.lng);
+    const cy = Math.floor((bounds.south + bounds.north) / 2 / cellDeg.lat);
     const names = [['電車', '電'], ['車', '車'], ['人の声', '声'], ['セミ', '蝉'], ['鳥', '鳥'], null];
-    const rows = 8;
-    const cols = 6;
-    const h = (bounds.north - bounds.south) / rows;
-    const w = (bounds.east - bounds.west) / cols;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        if ((x * 7 + y * 3) % 5 === 0) continue; // ところどころ空ける
-        const db = 35 + ((x * 13 + y * 17) % 60);
-        const t = names[(x + y * 2) % names.length];
+    const cells = [];
+    for (let dy = -4; dy <= 4; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        if ((dx * 7 + dy * 3 + 40) % 4 !== 0) continue; // ところどころだけ測ったことにする
+        const db = 38 + ((dx * 13 + dy * 17 + 100) % 55);
+        const indoor = (dx + dy + 20) % 5 === 0;
+        const t = names[(dx + dy * 2 + 30) % names.length];
         cells.push({
-          x: x, y: y,
-          south: bounds.south + y * h, north: bounds.south + (y + 1) * h,
-          west: bounds.west + x * w, east: bounds.west + (x + 1) * w,
-          avg_db: db, count: 3,
-          tag: t ? { id: x, name: t[0], icon: t[1] } : null,
+          x: cx + dx, y: cy + dy, avg_db: db, count: 2,
+          out_db: indoor ? null : db, out_count: indoor ? 0 : 2,
+          tag: t ? { id: dx, name: t[0], icon: t[1] } : null,
         });
       }
     }
-    return { level: '100m', cells: cells, truncated: false };
+    return { level: '50m', cell_deg: cellDeg, cells: cells, truncated: false };
+  }
+
+  /* ---------- ヒートマップの層（1枚のキャンバス） ----------
+     Google Maps の OverlayView（地図の上に自分で描く層）を使う。
+     地図が動くたびに draw() が呼ばれるので、見えている範囲だけをキャンバスに描き直す。
+     ★google.maps が読み込まれてからでないと作れないので、クラスは関数の中で作る */
+
+  // マスの値を決める。測ったマスはその値、測っていないマスは近くの屋外の記録から推定する
+  //   推定 = 近い記録ほど強く効く重み付き平均（地震の震度分布図と同じ考え方）
+  //   濃さ = 重みの合計。記録から離れるほど、うすくなる
+  function estimateHeat(cells) {
+    const key = (x, y) => x + ',' + y;
+    const measured = new Map();
+    const out = [];
+    cells.forEach(function (c) {
+      measured.set(key(c.x, c.y), true);
+      const outdoor = c.out_db !== null && c.out_db !== undefined;
+      out.push({ x: c.x, y: c.y, db: outdoor ? c.out_db : c.avg_db, alpha: HEAT_ALPHA, indoor: !outdoor });
+    });
+
+    const acc = new Map();
+    cells.forEach(function (c) {
+      if (c.out_db === null || c.out_db === undefined) return; // 屋内だけのマスは広げない
+      const strength = Math.sqrt(Math.min(c.out_count || 1, 9)); // 記録が多いほど少し強く効く（3倍まで）
+      for (let dy = -HEAT_SPREAD; dy <= HEAT_SPREAD; dy++) {
+        for (let dx = -HEAT_SPREAD; dx <= HEAT_SPREAD; dx++) {
+          const d = Math.hypot(dx, dy);
+          if (d === 0 || d > HEAT_SPREAD + 1e-9) continue;
+          const k = key(c.x + dx, c.y + dy);
+          if (measured.has(k)) continue;
+          const w = strength * Math.exp((-d * d) / HEAT_FADE);
+          const a = acc.get(k) || { x: c.x + dx, y: c.y + dy, sw: 0, swv: 0 };
+          a.sw += w;
+          a.swv += w * c.out_db;
+          acc.set(k, a);
+        }
+      }
+    });
+    acc.forEach(function (a) {
+      out.push({ x: a.x, y: a.y, db: a.swv / a.sw, alpha: HEAT_ALPHA * Math.min(HEAT_EST_MAX, a.sw), indoor: false });
+    });
+    return out;
+  }
+
+  // 屋内だけのマスに重ねる斜線
+  function stripePattern(ctx) {
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 8;
+    const t = tile.getContext('2d');
+    t.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    t.lineWidth = 1.5;
+    t.beginPath();
+    t.moveTo(0, 8);
+    t.lineTo(8, 0);
+    t.stroke();
+    return ctx.createPattern(tile, 'repeat');
+  }
+
+  const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+
+  function createHeatLayer() {
+    class HeatLayer extends google.maps.OverlayView {
+      constructor() {
+        super();
+        this.canvas = document.createElement('canvas');
+        this.canvas.className = 'heat-canvas'; // map.css
+        this.cells = []; // estimateHeat() の結果
+        this.cellDeg = null;
+        this.visible = true;
+      }
+
+      onAdd() {
+        this.getPanes().overlayLayer.appendChild(this.canvas);
+      }
+
+      onRemove() {
+        this.canvas.remove();
+      }
+
+      setData(cells, cellDeg) {
+        this.cells = estimateHeat(cells);
+        this.cellDeg = cellDeg;
+        this.draw();
+      }
+
+      draw() {
+        const proj = this.getProjection();
+        const map = this.getMap();
+        const bounds = map && map.getBounds();
+        if (!proj || !bounds) return;
+
+        // キャンバスを、見えている範囲にぴったり重ねる
+        const div = map.getDiv();
+        const w = div.clientWidth;
+        const h = div.clientHeight;
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const top = ne.lat();
+        const left = sw.lng();
+        const origin = proj.fromLatLngToDivPixel(new google.maps.LatLng(top, left));
+        const dpr = Math.min(global.devicePixelRatio || 1, 2);
+        const c = this.canvas;
+        c.style.left = origin.x + 'px';
+        c.style.top = origin.y + 'px';
+        c.style.width = w + 'px';
+        c.style.height = h + 'px';
+        if (c.width !== Math.round(w * dpr)) c.width = Math.round(w * dpr);
+        if (c.height !== Math.round(h * dpr)) c.height = Math.round(h * dpr);
+        const ctx = c.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        if (!this.visible || !this.cells.length || !this.cellDeg) return;
+
+        // 緯度経度 → キャンバスの位置。経度はそのまま比例、緯度はメルカトル図法の式で計算する
+        const p2 = proj.fromLatLngToDivPixel(new google.maps.LatLng(top, left + 0.01));
+        const kx = (p2.x - origin.x) / 0.01; // 経度1度あたりのpx
+        const ky = (kx * 180) / Math.PI; // メルカトルの1あたりのpx
+        const topY = mercY(top);
+        const dLat = this.cellDeg.lat;
+        const dLng = this.cellDeg.lng;
+        const cellPx = dLng * kx;
+        const gap = cellPx >= HEAT_GAP_MIN_PX ? 0.5 : 0; // 拡大したときだけ、マスの境目を見せる
+
+        const colors = [];
+        for (let i = 1; i <= 7; i++) colors.push(cssVar('--heat-' + i, '#999999'));
+        const stripes = stripePattern(ctx);
+
+        this.cells.forEach(function (cell) {
+          const x0 = (cell.x * dLng - left) * kx;
+          const x1 = x0 + cellPx;
+          const y0 = (topY - mercY((cell.y + 1) * dLat)) * ky; // 北端
+          const y1 = (topY - mercY(cell.y * dLat)) * ky; // 南端
+          if (x1 < 0 || x0 > w || y1 < 0 || y0 > h) return; // 見えていないマス
+          const rw = Math.max(1, x1 - x0 - gap * 2);
+          const rh = Math.max(1, y1 - y0 - gap * 2);
+          ctx.globalAlpha = cell.alpha;
+          ctx.fillStyle = colors[heatStep(cell.db) - 1];
+          ctx.fillRect(x0 + gap, y0 + gap, rw, rh);
+          if (cell.indoor && cellPx >= HEAT_GAP_MIN_PX) {
+            ctx.fillStyle = stripes;
+            ctx.fillRect(x0 + gap, y0 + gap, rw, rh);
+          }
+        });
+        ctx.globalAlpha = 1;
+      }
+    }
+    return new HeatLayer();
   }
 
   /* ---------- 本体 ---------- */
@@ -273,9 +427,10 @@
     this.accuracyCircle = null;
     this.badges = []; // 最後に取ったバッジ（ズームが変わったら、まとめ直しに使う）
     this.badgeMarkers = new Map(); // 上に出ているバッジのid -> { marker, badge, content, group }
-    this.heatRects = []; // ヒートマップのマス（google.maps.Rectangle）
+    this.heatLayer = null; // ヒートマップの層（createHeatLayer）。地図ができてから作る
     this.tagMarkers = []; // マスに重ねるタグのアイコン
-    this.heatCells = [];
+    this.heatCells = []; // APIから受け取ったマス（タグのアイコンにも使う）
+    this.heatCellDeg = null;
     this.selectedId = null; // タップして選択中のバッジ（ピンの見た目を変える）
     this.lastPosition = null;
     this._watchId = null;
@@ -315,6 +470,9 @@
     // 現在地が取れる前に自分で地図を動かしたら、取れても中心を動かさない
     let userMoved = false;
     this.map.addListener('dragstart', function () { userMoved = true; });
+
+    this.heatLayer = createHeatLayer();
+    this.heatLayer.setMap(this.map);
 
     this._emit('map-ready', { center: center });
 
@@ -458,7 +616,6 @@
 
         const badgesUrl = scope === 'everyone' ? this.opts.everyoneUrl : this.opts.badgesUrl;
         const heatParams = new URLSearchParams(params);
-        heatParams.set('zoom', String(this.map.getZoom()));
         if (scope === 'mine') heatParams.set('mine', '1');
 
         // バッジとヒートマップを同時に取りに行く
@@ -474,6 +631,7 @@
       if (scope !== this.scope) return; // 取っている間に切り替えられた
       if (heat) {
         this.heatCells = heat.cells || [];
+        this.heatCellDeg = heat.cell_deg;
         this._renderHeatmap();
         this._emit('heatmap-loaded', { level: heat.level, truncated: !!heat.truncated });
       }
@@ -498,40 +656,19 @@
 
   /* ----- ヒートマップ ----- */
   DetherMap.prototype._renderHeatmap = function () {
-    this.heatRects.forEach(function (r) { r.setMap(null); });
-    this.heatRects = [];
-    const colors = [];
-    for (let i = 1; i <= 7; i++) colors.push(cssVar('--heat-' + i, '#999999'));
-    const line = cssVar('--heat-line', 'rgba(255,255,255,0.5)');
-
-    const self = this;
-    this.heatCells.forEach(function (c) {
-      self.heatRects.push(
-        new google.maps.Rectangle({
-          map: self.map,
-          bounds: { south: c.south, west: c.west, north: c.north, east: c.east },
-          fillColor: colors[heatStep(c.avg_db) - 1],
-          fillOpacity: 0.72,
-          strokeColor: line,
-          strokeOpacity: 1,
-          strokeWeight: 0.5,
-          clickable: false,
-          zIndex: 1,
-        })
-      );
-    });
+    if (this.heatLayer) this.heatLayer.setData(this.heatCells, this.heatCellDeg);
     this._renderTags();
   };
 
   DetherMap.prototype._renderTags = function () {
     this.tagMarkers.forEach(function (m) { m.map = null; });
     this.tagMarkers = [];
-    if (!this.layers.tags || !this.heatCells.length) return;
+    const deg = this.heatCellDeg;
+    if (!this.layers.tags || !this.heatCells.length || !deg) return;
 
     // マスの大きさ（画面上のpx）。小さすぎるときはアイコンを出さない
-    const c0 = this.heatCells[0];
-    const a = this._toPixel(c0.south, c0.west);
-    const b = this._toPixel(c0.north, c0.east);
+    const a = this._toPixel(0, 0);
+    const b = this._toPixel(0, deg.lng);
     if (!a || Math.abs(b.x - a.x) < TAG_MIN_CELL_PX) return;
 
     const self = this;
@@ -539,7 +676,7 @@
       if (!c.tag) return;
       const marker = new google.maps.marker.AdvancedMarkerElement({
         map: self.map,
-        position: { lat: (c.south + c.north) / 2, lng: (c.west + c.east) / 2 },
+        position: { lat: (c.y + 0.5) * deg.lat, lng: (c.x + 0.5) * deg.lng },
         content: createTagElement(c.tag),
         zIndex: 10,
       });
@@ -628,7 +765,7 @@
     if (this._abort) this._abort.abort();
     this.badgeMarkers.forEach(function (e) { e.marker.map = null; });
     this.badgeMarkers.clear();
-    this.heatRects.forEach(function (r) { r.setMap(null); });
+    if (this.heatLayer) this.heatLayer.setMap(null);
     this.tagMarkers.forEach(function (m) { m.map = null; });
   };
 

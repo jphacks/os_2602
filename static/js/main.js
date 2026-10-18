@@ -108,10 +108,53 @@ function showMessage(text, category = "info") {
   item.className = `flash flash-${category}`;
   // 利用者の入力が混ざる可能性があるので innerHTML は使わない
   item.textContent = text;
+  item.title = "タップで閉じる";
   list.appendChild(item);
 
-  setTimeout(() => item.remove(), 4000);
+  setTimeout(() => dismissMessage(item), 4000);
 }
+
+/**
+ * メッセージを、ふわっと消す。
+ * ★メッセージはタップでも閉じられる（下の click の受付。Python側から出したものも同じ）。
+ */
+function dismissMessage(item) {
+  if (!item.isConnected || item.classList.contains("flash--out")) return;
+  item.classList.add("flash--out");
+  setTimeout(() => item.remove(), 200);
+}
+
+document.addEventListener("click", (e) => {
+  const item = e.target.closest(".flash");
+  if (item) dismissMessage(item);
+});
+
+/**
+ * スライドする切り替え（class="seg"）の位置を、選んでいるボタンに合わせる。
+ * 見た目は app.css の .seg。各ページの処理が aria-selected / aria-checked を変えると、
+ * それを見張って --seg-i（何番目か）を入れ直すので、ふくらんだ背景がそこへ滑っていく。
+ */
+function initSegments() {
+  document.querySelectorAll(".seg").forEach((seg) => {
+    const update = () => {
+      const items = [...seg.children].filter((el) => el.matches('[role="tab"], [role="radio"]'));
+      const index = items.findIndex(
+        (el) => el.getAttribute("aria-selected") === "true" || el.getAttribute("aria-checked") === "true"
+      );
+      seg.style.setProperty("--seg-n", String(items.length || 1));
+      seg.style.setProperty("--seg-i", String(Math.max(0, index)));
+    };
+    update();
+    new MutationObserver(update).observe(seg, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["aria-selected", "aria-checked"],
+    });
+    // 最初の位置に置いてから、滑る動きを付ける
+    requestAnimationFrame(() => requestAnimationFrame(() => seg.classList.add("seg--ready")));
+  });
+}
+initSegments();
 
 /**
  * 送信中はボタンを無効化して二重送信を防ぐ。

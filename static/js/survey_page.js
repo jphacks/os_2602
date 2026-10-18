@@ -32,7 +32,8 @@
     quiet: "静寂を判定中",
     deep: "深い静寂を判定中",
   };
-  const STATE_TEXT = { starting: "準備中", paused: "一時停止中", interrupted: "中断中" };
+  const STATE_TEXT = { starting: "準備中", paused: "一時停止中", interrupted: "中断中・押して再開" };
+  const PLACE_KEY = "dether-indoor"; // 前回選んだ「屋外／屋内」を覚えておく（"1" なら屋内）
 
   // 音量の目安。ゲージの下のラベルと、波形の色に使う
   function toneOf(db) {
@@ -46,11 +47,12 @@
   const fmt1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : "--");
 
   /* ---------- 調査の進行役（measure.js） ---------- */
-  const survey = new DetherSurvey();
+  const survey = new DetherSurvey({ indoor: loadIndoor() });
 
   /* ---------- 画面の部品 ---------- */
   const view = { idle: $("survey-idle"), live: $("survey-live") };
   const pill = $("live-pill");
+  const pillStatus = $("live-status");
   const chip = $("gauge-chip");
   const wave = $("wave");
   const bars = [];
@@ -105,6 +107,20 @@
     survey.start();
   });
   $("survey-stop").addEventListener("click", () => survey.stop());
+
+  // 屋外／屋内（始める前の切り替え）
+  document.querySelectorAll(".place-switch__option").forEach((btn) => {
+    btn.addEventListener("click", () => setIndoor(btn.dataset.indoor === "1"));
+  });
+  // 左上の表示：中断中なら再開、調査中なら屋外⇔屋内の切り替え（★survey の操作なのでボタンの処理の中で）
+  pill.addEventListener("click", () => {
+    if (survey.state === "interrupted") {
+      survey.resume();
+    } else if (survey.state === "measuring") {
+      setIndoor(!survey.indoor);
+      showMessage(`${survey.indoor ? "屋内" : "屋外"}に切り替えました。この区間は測り直します`, "info");
+    }
+  });
   $("survey-resume").addEventListener("click", () => survey.resume());
   // バッジ獲得のポップアップは、✕・背景・Esc のどれで閉じても調査を再開する（記録を見ているときは閉じるだけ）
   $("badge-popup-close").addEventListener("click", closePopup);
@@ -147,7 +163,8 @@
     view.idle.hidden = running;
     view.live.hidden = !running;
     pill.dataset.state = state;
-    if (STATE_TEXT[state]) pill.textContent = STATE_TEXT[state];
+    if (STATE_TEXT[state]) pillStatus.textContent = STATE_TEXT[state];
+    showPlace();
     $("survey-resume").hidden = state !== "interrupted";
     if (state === "measuring") sand.start();
     else sand.stop(); // 一時停止中・中断中などは砂も止める（電池のため）
@@ -182,7 +199,11 @@
     $("live-max").textContent = fmt1(segMax);
 
     if (survey.state === "measuring") {
-      pill.textContent = MODE_TEXT[d.mode] || MODE_TEXT.normal;
+      const text = MODE_TEXT[d.mode] || MODE_TEXT.normal;
+      if (pillStatus.textContent !== text) {
+        pillStatus.textContent = text;
+        showPlace(); // 読み上げ用のラベルも合わせる
+      }
       pill.dataset.mode = d.mode;
     }
     $("guide").hidden = !(d.guide && d.mode === "loud");
@@ -222,6 +243,45 @@
 
   survey.on("error", (e) => showError(e.detail.message));
 
+  /* ---------- 屋外／屋内 ---------- */
+
+  // localStorage はプライベートモードなどで使えないことがあるので、失敗したら屋外にする
+  function loadIndoor() {
+    try {
+      return localStorage.getItem(PLACE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function setIndoor(indoor) {
+    survey.setIndoor(indoor); // 調査中なら、測りかけの区間は捨てて測り直す（measure.js）
+    try {
+      localStorage.setItem(PLACE_KEY, indoor ? "1" : "0");
+    } catch {
+      /* 覚えられなくても困らない */
+    }
+    showPlace();
+  }
+
+  // 始める前の切り替えと、調査中の左上の表示を、今の屋外／屋内に合わせる
+  function showPlace() {
+    const place = survey.indoor ? "屋内" : "屋外";
+    document.querySelectorAll(".place-switch__option").forEach((btn) => {
+      btn.setAttribute("aria-checked", String((btn.dataset.indoor === "1") === survey.indoor));
+    });
+    $("live-place").textContent = place;
+    pill.dataset.indoor = survey.indoor ? "1" : "0";
+    const label =
+      survey.state === "interrupted"
+        ? "中断中。押すと調査を再開します"
+        : survey.state === "measuring"
+          ? `${place}・${pillStatus.textContent}。押すと${survey.indoor ? "屋外" : "屋内"}に切り替えます`
+          : `${place}・${pillStatus.textContent}`;
+    pill.setAttribute("aria-label", label);
+  }
+  showPlace();
+
   /* ---------- 描画の道具 ---------- */
 
   function resetLive() {
@@ -243,7 +303,7 @@
     $("session-count").textContent = "0";
     $("session-badge").replaceChildren();
     $("session-last").textContent = "直前の測定：まだありません";
-    pill.textContent = STATE_TEXT.starting;
+    pillStatus.textContent = STATE_TEXT.starting;
     delete pill.dataset.mode;
     lastRecord = null;
     updateLivePost();

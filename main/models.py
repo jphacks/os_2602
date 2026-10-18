@@ -20,7 +20,8 @@ CELL_LNG_DEG = Decimal(1) / CELLS_PER_DEG_LNG
 # 粗いマスは、10mのマスの番号を割って切り捨てるだけで作れる（保存する列は増やさない）
 #   cell_x // 10  = 標準の100mメッシュ / cell_x // 100 = 標準の3次メッシュ（約1km）
 #   境界は標準メッシュとぴったり一致する（1次〜3次メッシュの幅がどれもマスの整数倍のため）
-CELL_LEVELS = {"10m": 1, "100m": 10, "1km": 100}
+#   cell_x // 5   = 約50m（ヒートマップのマス。100mメッシュをちょうど2×2に分けたもの）
+CELL_LEVELS = {"10m": 1, "50m": 5, "100m": 10, "1km": 100}
 
 
 def to_cell(lat, lng):
@@ -151,6 +152,8 @@ class Measurement(models.Model):
     duration_seconds = models.PositiveSmallIntegerField("測定秒数")
     # 音の形（0〜1 が16個。低音→高音）。バッジの「音の標本」の模様を後から描くため。古い記録は空
     spectrum = models.JSONField("音の形", null=True, blank=True)
+    # 調査を始めるとき（と調査中）に選ぶ「屋外／屋内」。ヒートマップでは、屋内の記録はまわりに広げない
+    is_indoor = models.BooleanField("屋内", default=False)
     time_band = models.ForeignKey(
         TimeBand,
         on_delete=models.PROTECT,  # 時間帯を消しても測定記録は消えない

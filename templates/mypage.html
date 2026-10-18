@@ -59,7 +59,7 @@
     </div>
 
     {% if band_tabs %}
-    <div class="band-tabs" role="tablist" aria-label="時間帯で絞り込む">
+    <div class="seg band-tabs" role="tablist" aria-label="時間帯で絞り込む">
       <button class="band-tabs__tab" type="button" role="tab" aria-selected="true" data-band="all">すべて</button>
       {% for band in band_tabs %}
       <button class="band-tabs__tab" type="button" role="tab" aria-selected="false" data-band="{{ band.id }}">{{ band.name }}</button>
