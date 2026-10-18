@@ -14,12 +14,48 @@
 /* ===========================================================================
    1. 調査する前
    =========================================================================== */
+/* ===== 屋外／屋内（始める前） ===== */
+.place-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: min(260px, 100%);
+  margin: 20px auto 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+}
+.place-switch__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--d-muted);
+  font: 700 13.5px var(--d-font);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.place-switch__option svg {
+  width: 16px;
+  height: 16px;
+}
+.place-switch__option[aria-checked="true"] {
+  background: var(--d-surface);
+  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
+  color: var(--d-text);
+}
+
 .survey-start {
   display: grid;
   place-items: center;
   width: var(--dial);
   height: var(--dial);
-  margin: 40px auto 0;
+  margin: 28px auto 0;
   border-radius: 50%;
   background: var(--d-bg);
   box-shadow: var(--d-raised-lg);
@@ -168,25 +204,48 @@
    =========================================================================== */
 .live-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   margin-top: 4px;
 }
 
+/* 押せる表示：調査中は屋外⇔屋内の切り替え、中断中は再開 */
 .live-pill {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 18px;
+  min-height: 44px;
+  padding: 6px 18px 6px 14px;
   background: var(--d-surface);
   border: 1px solid var(--d-edge);
   border-radius: 999px;
   box-shadow: var(--d-raised);
-  font-size: 14px;
-  font-weight: 700;
+  color: var(--d-text);
+  font: 700 14px var(--d-font);
   letter-spacing: 0.06em;
   white-space: nowrap;
+  cursor: pointer;
+}
+.live-pill:active {
+  transform: scale(0.98);
+}
+/* 屋外／屋内の小さなラベル（へこんだ形） */
+.live-pill__place {
+  order: -1; /* 点より前に出す */
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  color: var(--d-accent);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+/* 中断中は、押せることが分かるように強い色にする */
+.live-pill[data-state="interrupted"] {
+  background: var(--d-strong);
+  color: var(--d-on-strong);
 }
 .live-pill::before {
   content: "";

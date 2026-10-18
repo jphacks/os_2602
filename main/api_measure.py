@@ -51,6 +51,7 @@ class MeasurementInput:
     gps_accuracy: float  # メートル
     measured_at: datetime  # タイムゾーン付き
     spectrum: list[float] | None = None  # 音の形（0〜1 が16個）。無い・壊れているときは None
+    indoor: bool = False  # 屋内で測ったか（調査画面の「屋外／屋内」）
 
 
 # --- 受け取り口 ---------------------------------------------------------------
@@ -126,6 +127,7 @@ def parse_measurement(data: dict) -> tuple[MeasurementInput | None, str | None]:
         gps_accuracy=round(accuracy, 1),
         measured_at=_parse_time(data.get("measured_at")),
         spectrum=_parse_spectrum(data.get("spectrum")),
+        indoor=data.get("indoor") is True,  # 送られていない・true 以外なら屋外
     ), None
 
 
