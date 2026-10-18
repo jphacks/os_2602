@@ -166,17 +166,31 @@ def everyone_badges(request):
     )
     if time_band is not None:
         badges = badges.filter(time_band_id=time_band)
+    seasonal = wants_seasonal(request)
+    if not seasonal:
+        badges = badges.exclude(SEASONAL_MEASUREMENT)
     pins = [post_badge_dict(ub, request.user) for ub in badges[:MAX_BADGES]]
     pins += tag_post_pins(
-        Q(), (south, north, west, east), time_band, request.user, MAX_BADGES - len(pins)
+        Q(), (south, north, west, east), time_band, request.user, MAX_BADGES - len(pins), seasonal
     )
     return json_response({"badges": pins})
 
 
-def tag_post_pins(where, box, time_band, viewer, limit):
+# 季節タグ（セミ・祭り・音楽フェスなど、その時期だけの音）が付いた測定。
+# 地図の「季節の音」を消したときは、これに当てはまるバッジ・投稿・ヒートマップの記録を外す
+SEASONAL_MEASUREMENT = Q(measurement__tags__tag_type=Tag.TagType.SEASONAL)
+
+
+def wants_seasonal(request) -> bool:
+    """?seasonal=0 なら、季節タグの付いた記録を外す（地図の「季節の音」ボタン）。省略なら含める"""
+    return request.GET.get("seasonal") != "0"
+
+
+def tag_post_pins(where, box, time_band, viewer, limit, seasonal=True):
     """バッジの無い投稿（タグのメダルで出す）のピン。
 
     where で絞る（ローカルマップなら自分の投稿だけ）。
+    seasonal=False なら季節タグの付いた投稿を外す。
     """
     if limit <= 0:
         return []
@@ -191,6 +205,8 @@ def tag_post_pins(where, box, time_band, viewer, limit):
     )
     if time_band is not None:
         posts = posts.filter(measurement__time_band_id=time_band)
+    if not seasonal:
+        posts = posts.exclude(SEASONAL_MEASUREMENT)
     return [tag_post_dict(p, viewer) for p in posts[:limit]]
 
 

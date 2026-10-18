@@ -139,6 +139,12 @@
   box-shadow: var(--d-raised);
 }
 
+/* 地図そのもの（map.js が .dether-map の中に作る。テーマを変えると作り直す） */
+.dether-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
 .dether-map {
   width: 100%;
   /* 画面の高さから、上の操作・色の見方・下のタブの分を引く */
