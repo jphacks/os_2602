@@ -687,6 +687,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   width: 100%;
   height: 44px;
   border: 1.5px solid var(--d-strong);
@@ -694,6 +695,11 @@
   color: var(--d-strong);
   font: 700 15px var(--d-font);
   text-decoration: none;
+}
+.badge-popup__share svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .badge-popup__hint {
