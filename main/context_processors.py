@@ -33,9 +33,9 @@ SITE_DESCRIPTION = (
 #
 # ★空のときは画像用のタグを出さない。画像が無いのにタグだけ出すと、
 #   SNS側が「画像が取れない」と判断してカードが小さいまま表示される。
-# 用意するとき: 1200x630 の画像を static/images/ogp.png に置き、
-#               ここを "/static/images/ogp.png" にする。
-OGP_IMAGE = ""
+# 1200x630。背景色の真ん中にロゴ（dether_logo_light.png）を置いたもの。
+# ★SNS側がURLを覚えるので、作り直したときはファイル名ごと変えないと古い画像が出続ける。
+OGP_IMAGE = "/static/images/ogp.png"
 
 
 def site_settings(request) -> dict:
