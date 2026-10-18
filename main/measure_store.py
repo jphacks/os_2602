@@ -59,7 +59,7 @@ class SavedBadge:
 
 # BadgeType が1件も無いときに使う企画書の値（強い順）
 DEFAULT_RULES = [
-    BadgeRule("q35", "深い静寂バッジ", "quiet", 35.0, 15.0, at_least=False),
+    BadgeRule("q35", "深い静寂バッジ", "quiet", 33.5, 15.0, at_least=False),
     BadgeRule("q40", "静寂バッジ", "quiet", 40.0, 15.0, at_least=False),
     BadgeRule("b90", "90dBバッジ", "loud", 90.0, 10.0, at_least=True),
     BadgeRule("b80", "80dBバッジ", "loud", 80.0, 10.0, at_least=True),
