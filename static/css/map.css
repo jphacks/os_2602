@@ -56,9 +56,13 @@
   font: 700 13.5px var(--d-font);
   cursor: pointer;
 }
+/* 選んでいる側の背景は、スライドする .seg（app.css）が描く */
+.scope-tabs {
+  --seg-pad: 6px;
+  --seg-gap: 6px;
+  --seg-radius: 15px;
+}
 .scope-tabs__tab[aria-selected="true"] {
-  background: var(--d-surface);
-  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
   color: var(--d-text);
 }
 

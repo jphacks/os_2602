@@ -44,9 +44,13 @@
   width: 16px;
   height: 16px;
 }
+/* 選んでいる側の背景は、スライドする .seg（app.css）が描く */
+.place-switch {
+  --seg-pad: 4px;
+  --seg-gap: 4px;
+  --seg-radius: 999px;
+}
 .place-switch__option[aria-checked="true"] {
-  background: var(--d-surface);
-  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
   color: var(--d-text);
 }
 

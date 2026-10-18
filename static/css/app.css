@@ -356,3 +356,52 @@ body {
   color: var(--bg);
   font-weight: 700;
 }
+
+/* ===========================================================================
+   スライドする切り替え（.seg）
+   「屋外｜屋内」「ローカル｜全国」「すべて｜昼｜夜」のように、へこんだ溝の中で
+   選んでいるものだけがふくらむ切り替え。ふくらんだ背景（::before）が、選んだほうへ滑っていく。
+
+   使い方：入れ物に class="seg" を付けるだけ。中のボタンは role="tab"（aria-selected）
+   か role="radio"（aria-checked）にする。位置は main.js が --seg-i / --seg-n に入れる。
+   入れ物ごとに --seg-pad（溝の内側の余白）/ --seg-gap（ボタンの間）/ --seg-radius を合わせる。
+   =========================================================================== */
+.seg {
+  position: relative;
+  isolation: isolate; /* ::before を、入れ物の背景より上・ボタンの文字より下に置くため */
+}
+.seg::before {
+  position: absolute;
+  top: var(--seg-pad, 4px);
+  bottom: var(--seg-pad, 4px);
+  left: var(--seg-pad, 4px);
+  z-index: -1;
+  width: calc(
+    (100% - var(--seg-pad, 4px) * 2 - var(--seg-gap, 4px) * (var(--seg-n, 2) - 1)) / var(--seg-n, 2)
+  );
+  border-radius: var(--seg-radius, 999px);
+  background: var(--d-surface);
+  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
+  content: "";
+  transform: translateX(calc(var(--seg-i, 0) * (100% + var(--seg-gap, 4px))));
+  transition: transform 0.28s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+/* 開いた直後は滑らせない（最初の位置に置くだけ） */
+.seg:not(.seg--ready)::before {
+  transition: none;
+}
+.seg > * {
+  transition: color 0.2s ease;
+}
+
+/* お知らせはタップで閉じる（main.js） */
+.flash {
+  cursor: pointer;
+}
+.flash--out {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
