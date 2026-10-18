@@ -77,7 +77,7 @@ def index(request):
         request,
         "index.html",
         {
-            "title": "調査",
+            # title は渡さない。トップなので、タブとSNSのカードはサイト名（dether）だけにする
             "recent": recent,
             "post_tags": common,
             "post_seasonal": seasonal,
