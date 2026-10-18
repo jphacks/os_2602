@@ -138,7 +138,7 @@ services:
     volumes:
       # ★HTTPS化したら、この1行を prod-https.conf に書き換える(切り替えはここだけ)。
       #   証明書を取る前に書き換えないこと。Nginxが起動しなくなる。
-      - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/prod-https.conf:/etc/nginx/conf.d/default.conf:ro
       # HTTP版・HTTPS版の両方から読み込む中身。★どちらでも必要。
       - ./docker/nginx/app.inc:/etc/nginx/app.inc:ro
       # web が集めたCSS・JSと、利用者が上げた画像を、Nginxからも見えるようにする。
