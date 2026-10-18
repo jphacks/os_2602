@@ -198,6 +198,12 @@ TAGS = [
     "description": "鈴を鳴らす音、柏手、人々のざわめき。"
                    "混み合う境内は、70dBくらいになります。"},
 
+    {"name": "JPHacks", "icon": "JP", "color": "ai",
+    "start": (10, 17, "09:00"), "end": (10, 31, "23:59"), "period": "JPHacks2026", "rare": True,
+    "hint": "自由な創造に奮う声。沸き立つ会場の青き魂たち。",
+    "description": "JPHacks2026 in OSAKA"
+                   "// Full Stack Hackers"},
+
 ]
 
 
