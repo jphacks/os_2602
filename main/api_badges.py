@@ -15,7 +15,13 @@ from django.db.models import Q
 from django.views.decorators.http import require_http_methods
 
 from main.api import json_response
-from main.api_posts import post_badge_dict, tag_post_pins, with_post_data
+from main.api_posts import (
+    SEASONAL_MEASUREMENT,
+    post_badge_dict,
+    tag_post_pins,
+    wants_seasonal,
+    with_post_data,
+)
 from main.models import UserBadge
 
 MAX_BADGES = 500  # 1回に返す上限（画面が重くならないように）
@@ -47,11 +53,19 @@ def my_badges(request):
     )
     if time_band is not None:
         badges = badges.filter(time_band_id=time_band)
+    seasonal = wants_seasonal(request)  # 地図の「季節の音」を消したら、季節タグの付いた記録を外す
+    if not seasonal:
+        badges = badges.exclude(SEASONAL_MEASUREMENT)
     pins = [post_badge_dict(ub, request.user) for ub in badges[:MAX_BADGES]]
     # バッジの無い自分の投稿（タグのメダルで出す）
     box = (south, north, west, east)
     pins += tag_post_pins(
-        Q(measurement__user=request.user), box, time_band, request.user, MAX_BADGES - len(pins)
+        Q(measurement__user=request.user),
+        box,
+        time_band,
+        request.user,
+        MAX_BADGES - len(pins),
+        seasonal,
     )
     return json_response({"badges": pins})
 

@@ -33,6 +33,7 @@ from main.models import (
     CELLS_PER_DEG_LNG,
     Measurement,
     MeasurementTag,
+    Tag,
 )
 
 # --- 調整する数値はここだけ -------------------------------------------------
@@ -73,6 +74,10 @@ def heatmap(request):
     measurements = Measurement.objects.filter(cell_x__range=(x0, x1), cell_y__range=(y0, y1))
     if time_band is not None:
         measurements = measurements.filter(time_band_id=time_band)
+    if request.GET.get("seasonal") == "0":
+        # 地図の「季節の音」を消したとき：
+        # 季節タグ（セミ・祭りなど、その時期だけの音）の付いた記録を外す
+        measurements = measurements.exclude(tags__tag_type=Tag.TagType.SEASONAL)
     if request.GET.get("mine") == "1":
         # 見えないアカウントがまだ無い人は、自分の測定も無い
         user_id = request.user.id if request.user.is_authenticated else None

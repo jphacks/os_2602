@@ -412,6 +412,7 @@
    *   heatmapUrl ヒートマップAPI（例: /api/heatmap）。省略でヒートマップを出さない
    *   scope      'mine'（ローカル・既定）/ 'everyone'（全国）
    *   timeBand   表示する時間帯の TimeBand.id（省略で全て）。APIには ?time_band=<id> で送る
+   *   seasonal   false なら季節タグ（セミ・祭りなど）の付いた記録を出さない（既定 true）。APIには ?seasonal=0
    *   mock       trueでAPIの代わりにダミーデータを使う
    *   target     イベントの発火先（省略で container）
    */
@@ -421,7 +422,8 @@
     this.target = this.opts.target || container;
     this.timeBand = this.opts.timeBand || '';
     this.scope = this.opts.scope === 'everyone' ? 'everyone' : 'mine';
-    this.layers = { badges: true, tags: true }; // 「バッジ」「タグ」の表示切り替え
+    this.seasonal = this.opts.seasonal !== false; // 季節タグの付いた記録も出すか（「季節の音」ボタン）
+    this.layers = { badges: true, tags: true }; // 「バッジ」の表示切り替え（tags はマスのタグのアイコン）
     this.map = null;
     this.meMarker = null;
     this.accuracyCircle = null;
@@ -453,36 +455,24 @@
     // 1. 地図をすぐ表示する。中心は前回の現在地（無ければ既定の中心）
     // ★現在地を待ってから表示すると、屋内などでGPSが決まるまで（最大10秒）真っ白になるため
     const center = loadCenter() || DEFAULT_CENTER;
-    this.map = new google.maps.Map(this.container, {
-      center: center,
-      zoom: DEFAULT_ZOOM,
-      mapId: this.opts.mapId,
-      disableDefaultUI: true,
-      zoomControl: true,
-      gestureHandling: 'greedy', // 片手操作向け
-      clickableIcons: false,
-      // サイトのテーマ（base.html の data-theme）に合わせて地図も暗くする
-      colorScheme: document.documentElement.dataset.theme === 'dark' ? 'DARK' : 'LIGHT',
+    this._userMoved = false;
+    this._createMap(center, DEFAULT_ZOOM);
+
+    // サイトのライト／ダーク（base.html の data-theme）が切り替わったら、地図も合わせる
+    const self = this;
+    new MutationObserver(function () { self._applyTheme(); }).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
     });
-
-    // 地図の移動が止まるたびに、表示範囲のバッジを取り直す
-    this.map.addListener('idle', this._scheduleFetch.bind(this));
-    // 現在地が取れる前に自分で地図を動かしたら、取れても中心を動かさない
-    let userMoved = false;
-    this.map.addListener('dragstart', function () { userMoved = true; });
-
-    this.heatLayer = createHeatLayer();
-    this.heatLayer.setMap(this.map);
 
     this._emit('map-ready', { center: center });
 
     // 2. 現在地は地図を出した後に取る。取れたらそこへ移す（失敗したら今の中心のまま）
-    const self = this;
     getCurrentPosition()
       .then(function (pos) {
         self.lastPosition = self._toPosition(pos);
         self._updateMe(self.lastPosition);
-        if (!userMoved) self.map.setCenter({ lat: self.lastPosition.lat, lng: self.lastPosition.lng });
+        if (!self._userMoved) self.map.setCenter({ lat: self.lastPosition.lat, lng: self.lastPosition.lng });
         saveCenter(self.lastPosition);
         self._emit('position', self.lastPosition);
       })
@@ -492,6 +482,66 @@
 
     this._startWatch();
     return this;
+  };
+
+  const themeScheme = () => (document.documentElement.dataset.theme === 'dark' ? 'DARK' : 'LIGHT');
+
+  /**
+   * 地図を作る。ライト／ダーク（colorScheme）は地図を作るときにしか決められないので、
+   * テーマが変わったら _applyTheme() がこれを呼んで作り直す。
+   * ★同じ要素に地図を作り直すと不安定なので、中に地図用の要素を1つ作って、毎回入れ替える
+   */
+  DetherMap.prototype._createMap = function (center, zoom) {
+    const el = document.createElement('div');
+    el.className = 'dether-map__canvas'; // map.css（入れ物いっぱいに広げる）
+    if (this._mapEl) this._mapEl.replaceWith(el);
+    else this.container.append(el);
+    this._mapEl = el;
+    this._scheme = themeScheme();
+
+    this.map = new google.maps.Map(el, {
+      center: center,
+      zoom: zoom,
+      mapId: this.opts.mapId,
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: 'greedy', // 片手操作向け
+      clickableIcons: false,
+      colorScheme: this._scheme, // サイトのテーマに合わせて地図も暗くする
+    });
+
+    // 地図の移動が止まるたびに、表示範囲のバッジを取り直す
+    this.map.addListener('idle', this._scheduleFetch.bind(this));
+    // 現在地が取れる前に自分で地図を動かしたら、取れても中心を動かさない
+    const self = this;
+    this.map.addListener('dragstart', function () { self._userMoved = true; });
+
+    this.heatLayer = createHeatLayer();
+    this.heatLayer.setMap(this.map);
+  };
+
+  /** テーマが変わったら、今の場所と拡大率のまま地図を作り直し、ピンやヒートマップを載せ直す */
+  DetherMap.prototype._applyTheme = function () {
+    if (!this.map || themeScheme() === this._scheme) return;
+    const center = this.map.getCenter().toJSON();
+    const zoom = this.map.getZoom();
+
+    // 前の地図に載せていたものを外す
+    this.badgeMarkers.forEach(function (e) { e.marker.map = null; });
+    this.badgeMarkers.clear();
+    this.tagMarkers.forEach(function (m) { m.map = null; });
+    this.tagMarkers = [];
+    if (this.heatLayer) this.heatLayer.setMap(null);
+    if (this.meMarker) this.meMarker.map = null;
+    if (this.accuracyCircle) this.accuracyCircle.setMap(null);
+    this.meMarker = null;
+    this.accuracyCircle = null;
+    google.maps.event.clearInstanceListeners(this.map);
+
+    this._createMap(center, zoom);
+    if (this.lastPosition) this._updateMe(this.lastPosition);
+    // ヒートマップは手元のデータですぐ描き直す。バッジは地図の準備ができたら（idle）取り直して置く
+    this._renderHeatmap();
   };
 
   DetherMap.prototype._toPosition = function (pos) {
@@ -565,6 +615,12 @@
     this.refresh();
   };
 
+  /** 季節タグ（セミ・祭りなど、その時期だけの音）の付いた記録を、ヒートマップとバッジに出すか */
+  DetherMap.prototype.setSeasonal = function (on) {
+    this.seasonal = !!on;
+    this.refresh();
+  };
+
   /** ローカル（'mine'）／全国（'everyone'）の切り替え */
   DetherMap.prototype.setScope = function (scope) {
     this.scope = scope === 'everyone' ? 'everyone' : 'mine';
@@ -613,6 +669,7 @@
           east: bounds.east,
         });
         if (this.timeBand) params.set('time_band', this.timeBand);
+        if (!this.seasonal) params.set('seasonal', '0'); // バッジにもヒートマップにも効かせる
 
         const badgesUrl = scope === 'everyone' ? this.opts.everyoneUrl : this.opts.badgesUrl;
         const heatParams = new URLSearchParams(params);

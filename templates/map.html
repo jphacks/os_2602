@@ -59,12 +59,14 @@
     </button>
 
     <div class="map-layers">
-      <button class="map-layers__btn" type="button" aria-pressed="true" data-layer="tags">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
-          <path d="M3 12V4h8l10 10-8 8z" />
-          <circle cx="7.5" cy="8.5" r="1.5" />
+      {# 季節タグ（セミ・祭り・音楽フェスなど、その時期だけの音）の付いた記録を、ヒートマップとバッジに出すか #}
+      <button class="map-layers__btn" type="button" aria-pressed="true" data-filter="seasonal"
+        aria-label="季節の音（セミ・祭りなど）を地図に出す">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z" />
+          <path d="M5 19 13 11" />
         </svg>
-        タグ
+        季節の音
       </button>
       <button class="map-layers__btn" type="button" aria-pressed="true" data-layer="badges">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">

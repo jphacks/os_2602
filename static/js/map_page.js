@@ -72,11 +72,13 @@
   $('map-band').addEventListener('change', (e) => detherMap.setTimeBand(e.target.value));
   $('recenter').addEventListener('click', () => detherMap.recenter());
 
+  // 右下のボタン：「季節の音」は季節タグの付いた記録を出すか、「バッジ」はピンを出すか
   document.querySelectorAll('.map-layers__btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const on = btn.getAttribute('aria-pressed') !== 'true';
       btn.setAttribute('aria-pressed', String(on));
-      detherMap.setLayer(btn.dataset.layer, on);
+      if (btn.dataset.filter === 'seasonal') detherMap.setSeasonal(on);
+      else detherMap.setLayer(btn.dataset.layer, on);
     });
   });
 
