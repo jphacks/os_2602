@@ -69,9 +69,9 @@
   const CONFIG = {
     // 補正値：推定dB = dBFS + この値。端末の種類ごとに分ける（どれに当たるかは deviceKind()）
     // ★PC（開発中にバッジの基準を合わせた端末）を基準にする。
-    //   iPhone 15 Pro は同じ音でPCより約20dB低く出たので、その分を足している。
+    //   iPhone 15 Pro は同じ音でPCより約20dB低く出た。+20 だと高すぎ、+10 だと低すぎたので +13 にしている。
     //   Android はまだ比べていないのでPCと同じ値
-    calibration: { ios: 114, android: 94, desktop: 94 },
+    calibration: { ios: 107, android: 94, desktop: 94 },
     // 表示・計算に使う下限と上限（スマホのマイクはこの外を正確に測れない）
     floorDb: 20,
     ceilDb: 130,
