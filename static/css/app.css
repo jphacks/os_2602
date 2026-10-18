@@ -31,7 +31,7 @@
   --d-very-loud: #bf6a4a;
   --d-on-alert: #fbf5e6;
 
-  /* バッジ部品（badge.css）が使う色。値はリーダーの badge-preview.html と同じ */
+  /* バッジ部品（badge.css）が使う色 */
   --bg: var(--d-bg);
   --ink: #243b35;
   --ink2: rgba(36, 59, 53, 0.76);

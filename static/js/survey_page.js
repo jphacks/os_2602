@@ -8,11 +8,6 @@
 
    ▼ バッジの見た目
      リーダーの部品 static/js/badge.js（DetherBadge）で作る。コード（b80 など）を渡すだけでよい。
-
-   ▼ 開発用：マイクの無いPCで試すとき
-     /?sim=loud（85dB前後）・/?sim=mid（60dB前後。バッジが出ない）・/?sim=quiet（37dB前後）で開くと、
-     マイクの代わりに作った音で動く。
-     位置は東京駅になる。記録はふつうにサーバーへ送るので、本番のURLでは使わないこと。
    =========================================================================== */
 
 (function () {
@@ -51,8 +46,7 @@
   const fmt1 = (v) => (Number.isFinite(v) ? v.toFixed(1) : "--");
 
   /* ---------- 調査の進行役（measure.js） ---------- */
-  const sim = new URLSearchParams(location.search).get("sim");
-  const survey = new DetherSurvey(sim ? { simulate: makeSimulator(sim), useLocation: false } : {});
+  const survey = new DetherSurvey();
 
   /* ---------- 画面の部品 ---------- */
   const view = { idle: $("survey-idle"), live: $("survey-live") };
@@ -567,16 +561,5 @@
     const el = $("survey-error");
     el.hidden = !message;
     el.textContent = message || "";
-  }
-
-  // 開発用：マイクの代わりの音（measure-test.html と同じ考え方）
-  function makeSimulator(kind) {
-    const base = { quiet: 37, mid: 60 }[kind] || 85;
-    const t0 = performance.now();
-    return () => {
-      const t = (performance.now() - t0) / 1000;
-      const noise = (Math.random() * 2 - 1) * (kind === "quiet" ? 1.5 : 3);
-      return base + (kind === "quiet" ? 0 : 3 * Math.sin(t * 1.7)) + noise;
-    };
   }
 })();

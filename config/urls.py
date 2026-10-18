@@ -8,16 +8,15 @@
 #   ここは「どのアプリに任せるか」だけを決める案内所。
 #   実際のURLは、各アプリの urls.py に書く。
 #
-#       config/urls.py    … /auth/ で始まるものは accounts に任せる  ← このファイル
+#       config/urls.py    … 管理画面と main への振り分け  ← このファイル
 #       main/urls.py      … / や /api/○○ など、自分たちで作るURL
-#       accounts/urls.py  … /auth/login など
 #
 #   全URLを1ファイルに書くと巨大になり、6人で編集したとき必ず衝突する。
 #   アプリごとに分けておけば別ファイルを触るので衝突しない。
 #
 # ▼ このファイルは基本的に触らない
 #
-#   URLを増やすときに触るのは main/urls.py や accounts/urls.py。
+#   URLを増やすときに触るのは main/urls.py。
 #   ここを触るのは「新しいアプリを作ったとき」だけ。
 # =============================================================================
 
@@ -47,15 +46,6 @@ urlpatterns = [
         RedirectView.as_view(url=settings.STATIC_URL + "favicon.ico"),
     ),
 ]
-
-# ★AUTH_ENABLED が False なら、ログイン関連のURLを登録しない。
-#   コードを消さずに機能をOFFにできる。
-if settings.AUTH_ENABLED:
-    urlpatterns += [
-        # "auth/" を付けると、accounts/urls.py の "login" が
-        # 実際には "/auth/login" になる。
-        path("auth/", include("accounts.urls")),
-    ]
 
 # --- 利用者が上げたファイル(プロフィールアイコンなど) ---
 # ★開発モードのときだけ、Djangoが自分で画像を配る。

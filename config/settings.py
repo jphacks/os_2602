@@ -70,9 +70,6 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
-# False にすると、ログイン関連のURLを登録しない(config/urls.py で使っている)。
-AUTH_ENABLED = _env_bool("AUTH_ENABLED", True)
-
 # Google Maps の APIキーとマップID(AdvancedMarker に必須)。値は .env に書く。
 # ★キーはブラウザに渡るので隠せない。Google Cloud 側で「ウェブサイトの制限」を必ずかける。
 #   本番用(サブドメインに制限)と開発用(localhost と *.trycloudflare.com に制限)で分ける。
@@ -101,7 +98,6 @@ INSTALLED_APPS = [
     # ★新しく python manage.py startapp ○○ したら、ここに1行足す。
     #   忘れると、そのアプリのモデルもURLも認識されない。
     "main",  # 画面とAPI
-    "accounts",  # ログイン・新規登録
 ]
 
 # --- デモ(動作確認用のページ) ---
@@ -160,7 +156,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                # 自作。{{ SITE_NAME }} と {{ AUTH_ENABLED }} を全ページで使えるようにする。
+                # 自作。{{ SITE_NAME }} などを全ページで使えるようにする。
                 "main.context_processors.site_settings",
             ],
         },
@@ -211,18 +207,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
-
-
-# =============================================================================
-# ログインの動き
-# =============================================================================
-
-# ログインが必要なページに未ログインで来た人を、どこへ案内するか。
-LOGIN_URL = "/auth/login"
-
-# ログイン後・ログアウト後の行き先。
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/"
 
 
 # =============================================================================
@@ -285,6 +269,17 @@ SESSION_COOKIE_AGE = 60 * 60 * 24 * 365 * 2  # 2年
 # =============================================================================
 
 if not DEBUG:
+    # ★Nginx が /static/ を30日キャッシュさせるので、ファイル名が同じだと
+    #   デプロイしても利用者のブラウザに古いJS・CSSが残る。
+    #   collectstatic のときにファイル名へ中身の指紋を付け(app.3f9a2c.css)、
+    #   中身が変わればURLも変わるようにする。{% static %} で書いていれば自動で効く。
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+        },
+    }
+
     SESSION_COOKIE_HTTPONLY = True  # JavaScriptから読めないようにする
     SESSION_COOKIE_SAMESITE = "Lax"  # 他サイトから勝手に使われるのを防ぐ
 
