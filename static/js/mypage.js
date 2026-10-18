@@ -7,12 +7,14 @@
      2. 「集めたバッジ」の絞り込み（すべて／昼／夜）
         行の data-band が時間帯のID、data-count が個数。右上の「合計」も出している分の合計にする
      3. カードを押すと「図鑑のシート」を開く。説明と、これまでの標本を並べる
+        レジェンド（main/legend_data.py）のカードなら、必要なタグを並べる
         上の大きなバッジは、開いたときは模様なし。下の標本を押すと、その標本の模様で描き直す
         （もう一度押すと模様なしに戻る）
+     4. 音の図鑑のページ（8個ずつ）を、横スワイプか ‹ › でめくる
 
    ▼ データ
      main/views.py の mypage() が作った zukan_data（ページの <script id="zukan-data">）。
-     キーはカードの data-key（dBバッジは "b-b80-1"、タグは "t-3"）。
+     キーはカードの data-key（dBバッジは "b-b80-1"、タグは "t-3"、レジェンドは "l-shiki"）。
    =========================================================================== */
 
 (function () {
@@ -33,7 +35,7 @@
 
   // 図鑑の1つ分のメダル。dBバッジはバッジのメダル、タグはタグのメダル（色はタグごと）
   function medalOf(entry, size, opt) {
-    return entry.kind === "tag"
+    return entry.kind === "tag" || entry.kind === "legend"
       ? Badge.tagMedal(entry.tag, size, opt)
       : Badge.medal(entry.code, size, opt);
   }
@@ -66,7 +68,7 @@
   let opener = null; // 閉じたら、押したカードに戻る
   let current = null; // 開いている図鑑の中身（zukan_data の1つ）
 
-  document.querySelectorAll(".zukan__item[data-key]").forEach((btn) => {
+  document.querySelectorAll(".zukan__item[data-key], .legend[data-key]").forEach((btn) => {
     btn.addEventListener("click", () => openZukan(btn));
   });
   $("zukan-sheet-close").addEventListener("click", closeZukan);
@@ -95,16 +97,25 @@
         return chip;
       })
     );
-    $("zukan-sheet-count").textContent = got
-      ? `${d.count}回 ${d.kind === "badge" ? "獲得" : "出会った"}`
-      : "まだ出会っていません";
+    const legend = d.kind === "legend";
+    $("zukan-sheet-count").textContent = legend
+      ? got
+        ? "解放しました！"
+        : `${d.need}個中 ${d.have}個 集めた`
+      : got
+        ? `${d.count}回 ${d.kind === "badge" ? "獲得" : "出会った"}`
+        : "まだ出会っていません";
 
     const text = $("zukan-sheet-text");
     text.textContent = got ? d.text : `ヒント：${d.text}`;
     text.classList.toggle("zukan-sheet__text--hint", !got);
 
-    $("zukan-sheet-items").replaceChildren(...d.items.map((it) => specimenItem(it, d)));
-    $("zukan-sheet-empty").hidden = d.items.length > 0;
+    // 下の一覧：レジェンドは「必要な音」、ほかは「集めた標本」
+    $("zukan-sheet-subtitle").replaceChildren(...subtitle(legend));
+    $("zukan-sheet-items").replaceChildren(
+      ...(legend ? d.reqs.map(requirementItem) : d.items.map((it) => specimenItem(it, d)))
+    );
+    $("zukan-sheet-empty").hidden = legend || d.items.length > 0;
 
     sheet.hidden = false;
     sheet.querySelector(".zukan-sheet__scroll").scrollTop = 0;
@@ -137,6 +148,26 @@
     picked.textContent = item ? `${item.at}・${item.avg_db.toFixed(1)} dB の音` : "";
   }
 
+  function subtitle(legend) {
+    const note = document.createElement("small");
+    note.textContent = legend
+      ? "全部の音に出会うと、このバッジが解放されます"
+      : "押すと、上のバッジにその音の模様が出ます";
+    return [legend ? "必要な音" : "集めた標本", note];
+  }
+
+  // レジェンドに必要なタグ1つ分。集めたものはメダルと名前、まだのものは「?」と「？？？」
+  function requirementItem(req) {
+    const li = document.createElement("li");
+    li.className = "specimen specimen--req";
+    li.append(Badge.tagMedal(req.tag, "list", { locked: !req.got }));
+    const name = document.createElement("span");
+    name.className = "specimen__db";
+    name.textContent = req.tag.name;
+    li.append(name);
+    return li;
+  }
+
   // 標本1つ分：模様入りのメダルと、日時・dB。押すと上に大きく出す
   function specimenItem(it, d) {
     const li = document.createElement("li");
@@ -167,5 +198,31 @@
     });
     li.append(btn);
     return li;
+  }
+
+  /* ---------- 4. 音の図鑑のページをめくる ----------
+     ページは横に並べてあり、スワイプでも ‹ › でもめくれる（CSS の scroll-snap で1ページずつ止まる） */
+  const pages = $("zukan-pages");
+  if (pages && $("zukan-next")) {
+    const count = pages.children.length;
+    const dots = document.querySelectorAll(".zukan-pager__dot");
+    const pageNow = () => Math.round(pages.scrollLeft / pages.clientWidth);
+    const go = (i) =>
+      pages.scrollTo({ left: Math.max(0, Math.min(count - 1, i)) * pages.clientWidth, behavior: "smooth" });
+
+    const showPage = () => {
+      const i = pageNow();
+      $("zukan-page-no").textContent = `${i + 1} / ${count}`;
+      $("zukan-prev").disabled = i <= 0;
+      $("zukan-next").disabled = i >= count - 1;
+      dots.forEach((dot, k) => dot.classList.toggle("is-current", k === i));
+    };
+    $("zukan-prev").addEventListener("click", () => go(pageNow() - 1));
+    $("zukan-next").addEventListener("click", () => go(pageNow() + 1));
+    pages.addEventListener("scroll", showPage, { passive: true });
+    pages.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") go(pageNow() - 1);
+      if (e.key === "ArrowRight") go(pageNow() + 1);
+    });
   }
 })();

@@ -22,6 +22,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from main.legend_data import LEGENDS
 from main.models import MeasurementTag, Tag, TimeBand, UserBadge
 
 # 調査ページの「最近の記録」に出す件数（static/js/survey_page.js の RECENT_MAX と同じ）
@@ -50,6 +51,8 @@ BADGE_HINT = {
 }
 # シートに並べる標本の数の上限（新しい順）
 ZUKAN_ITEMS = 60
+# 音の図鑑の1ページに並べるタグの数（横2 × 縦4）
+ZUKAN_PAGE = 8
 
 
 def index(request):
@@ -190,13 +193,65 @@ def mypage(request):
             "kind": "tag",
             "number": number,
             "icon": card["icon"],
-            "tag": tag.medal,  # badge.js の tagMedal() に渡す { name, icon, color }
+            # badge.js の tagMedal() に渡す { name, icon, color }。出会う前は名前とアイコンを隠す
+            "tag": tag.medal if met else {**tag.medal, "name": "？？？", "icon": "?"},
             # まだ出会っていないものは、名前も説明も渡さない（ページのソースから分からないように）
             "title": tag.name if met else "？？？",
             "chips": chips,
             "count": len(met),
             "text": (tag.description or "説明はまだありません") if met else tag.hint_text,
             "items": [_specimen_of(m) for m in met[:ZUKAN_ITEMS]],
+        }
+
+    # --- 音の図鑑のページ（8個ずつ。mypage.js が横にめくる） ---
+    tag_pages = [tag_cards[i : i + ZUKAN_PAGE] for i in range(0, len(tag_cards), ZUKAN_PAGE)]
+
+    # --- レジェンド：決められたタグを全部集めると解放（main/legend_data.py） ---
+    met_names = {c["tag"].name: c["tag"] for c in tag_cards if c["collected"]}
+    all_tags = {c["tag"].name: c["tag"] for c in tag_cards}
+    legend_cards = []
+    for legend in LEGENDS:
+        reqs = []
+        for name in legend["requires"]:
+            tag = all_tags.get(name)
+            got = name in met_names
+            reqs.append(
+                {
+                    "got": got,
+                    # まだのタグは名前もアイコンも隠す（図鑑と同じ）
+                    "tag": {
+                        "name": name if got else "？？？",
+                        "icon": (tag.medal["icon"] if tag else name[:1]) if got else "?",
+                        "color": tag.medal["color"] if tag else "sage",
+                    },
+                }
+            )
+        have = sum(r["got"] for r in reqs)
+        unlocked = have == len(reqs)
+        key = f"l-{legend['key']}"
+        medal = {"name": legend["name"], "icon": legend["icon"], "color": "legend"}
+        legend_cards.append(
+            {
+                "key": key,
+                "name": legend["name"],
+                "icon": legend["icon"],
+                "unlocked": unlocked,
+                "have": have,
+                "need": len(reqs),
+                "reqs": reqs,
+            }
+        )
+        zukan_data[key] = {
+            "kind": "legend",
+            "tag": medal,
+            "title": legend["name"],
+            "chips": ["レジェンド"],
+            "count": 1 if unlocked else 0,
+            "have": have,
+            "need": len(reqs),
+            "text": legend["description"] if unlocked else legend["hint"],
+            "reqs": reqs,
+            "items": [],
         }
 
     return render(
@@ -209,6 +264,8 @@ def mypage(request):
             # 絞り込みのタブ（すべて／昼／夜）。管理画面で時間帯を足すとタブも増える
             "band_tabs": [band for band in bands if band.is_active],
             "tag_cards": tag_cards,
+            "tag_pages": tag_pages,
+            "legend_cards": legend_cards,
             "tag_collected": sum(c["collected"] for c in tag_cards),
             # 「調査回数」は測定記録の数（10秒ごとの区間1つで1回）
             "survey_count": user.measurements.count(),

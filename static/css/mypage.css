@@ -461,3 +461,153 @@
   color: var(--ink2);
   font-size: 9.5px;
 }
+
+/* ===========================================================================
+   7. レジェンド（決められたタグを全部集めると解放。main/legend_data.py）
+   =========================================================================== */
+.legends {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  color: var(--d-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* 解放したもの：ふくらんだ箱を、金色のふちで囲む */
+.legend--unlocked {
+  border-color: rgba(201, 162, 63, 0.6);
+  background: var(--d-surface);
+  box-shadow: var(--d-raised), 0 0 0 1px rgba(233, 199, 102, 0.35) inset;
+}
+.legend:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
+.legend__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.legend__name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.legend__reqs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.legend__progress {
+  flex: none;
+  color: var(--d-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.legend--unlocked .legend__progress {
+  color: #b08a2e;
+}
+
+/* ===========================================================================
+   8. 音の図鑑のページ（8個ずつ。横にスワイプでめくる）
+   =========================================================================== */
+.zukan-pages {
+  display: flex;
+  margin: 6px -10px 0; /* カードの影と「今だけ」が枠で切れないよう、余白ごと少し外へ広げる */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none; /* スクロールバーは出さない（下の ‹ › と点で分かる） */
+}
+.zukan-pages::-webkit-scrollbar {
+  display: none;
+}
+.zukan-pages:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+/* 1ページ = 横2 × 縦4。最後のページで数が少なくても、高さはそろえる */
+.zukan-page {
+  flex: 0 0 100%;
+  grid-template-rows: repeat(4, minmax(64px, auto));
+  align-content: start;
+  margin: 0;
+  padding: 12px 10px 10px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always; /* 勢いよくスワイプしても1ページずつ止まる */
+}
+
+.zukan-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.zukan-pager__btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--d-edge);
+  border-radius: 50%;
+  background: var(--d-surface);
+  box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
+  color: var(--d-text);
+  cursor: pointer;
+}
+.zukan-pager__btn svg {
+  width: 18px;
+  height: 18px;
+}
+.zukan-pager__btn:disabled {
+  box-shadow: none;
+  color: var(--ink3);
+  cursor: default;
+  opacity: 0.5;
+}
+.zukan-pager__dots {
+  display: flex;
+  gap: 6px;
+}
+.zukan-pager__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--d-track);
+  transition:
+    width 0.25s ease,
+    background 0.25s ease;
+}
+.zukan-pager__dot.is-current {
+  width: 18px;
+  background: var(--d-accent);
+}
+.zukan-pager__no {
+  color: var(--d-muted);
+  font-size: 11.5px;
+}
+
+/* レジェンドのシートの「必要な音」（押せない） */
+.specimen--req {
+  cursor: default;
+}
