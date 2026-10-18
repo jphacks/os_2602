@@ -435,6 +435,7 @@
     $("badge-popup-band").textContent = bandName || "--";
     popupRec = null;
     $("badge-popup-post").hidden = true;
+    setShare(rec.badge, rec.avgDb, bandName);
 
     $("badge-popup").hidden = false;
     $("badge-popup-close").focus();
@@ -465,9 +466,18 @@
     // 投稿できるのは、サーバーに保存できた記録だけ
     popupRec = recordOf(d, row);
     $("badge-popup-post").hidden = !popupRec;
+    setShare(d.badge, d.result.avgDb, bandName);
 
     $("badge-popup").hidden = false;
     $("badge-popup-close").focus();
+  }
+
+  // 「Blueskyでシェア」。bsky.app の投稿画面を、文面を入れた状態で開く（ログインも送信もBluesky側）
+  // ★文面の #dether とURLは、Blueskyの投稿画面がタグとリンクにしてくれる
+  function setShare(badge, avgDb, bandName) {
+    const detail = [`平均 ${fmt1(avgDb)} dB`, bandName].filter(Boolean).join("・");
+    const text = `dether で「${NAMES[badge]}」を獲得しました！（${detail}）\n#dether\n${location.origin}/`;
+    $("badge-popup-share").href = `https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`;
   }
 
   // ★survey.resume() はボタンやキーの処理の中で呼ぶ（iPhoneはそうしないとマイクが再開しない）
