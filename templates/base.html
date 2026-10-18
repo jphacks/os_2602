@@ -58,10 +58,18 @@
 
     {% if OGP_IMAGE %}
     <meta property="og:image" content="{{ site_url }}{{ OGP_IMAGE }}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="{{ SITE_NAME }}" />
     <meta name="twitter:card" content="summary_large_image" />
     {% endif %}
 
-    <link rel="icon" href="/favicon.ico" />
+    {# タブのアイコン。ブラウザの見た目がダークなら、明るい色のピンにする（.ico は古いブラウザ用） #}
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="{% static 'images/favicon_light.png' %}" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" href="{% static 'images/favicon_dark.png' %}" media="(prefers-color-scheme: dark)" />
+    {# iPhone で「ホーム画面に追加」したときのアイコン（透明だと黒くなるので背景色で塗ってある） #}
+    <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}" />
 
     {# 文字は丸ゴシック（Zen Maru Gothic）、数字は Poppins。デザインに合わせている #}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
