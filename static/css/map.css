@@ -15,15 +15,24 @@
   --dether-me-ring: #ffffff;
 
   /* ヒートマップ（マスごとの平均dB）。map.js が読んで塗る。下の「色の見方」も同じ色 */
-  --heat-1: #4f7a66; /* 〜40 しずか */
-  --heat-2: #8db39f; /* 40 おだやか */
-  --heat-3: #c9dac4; /* 50 ふつう */
-  --heat-4: #e8d8a4; /* 60 にぎやか */
-  --heat-5: #dca36b; /* 70 うるさい */
-  --heat-6: #c4714f; /* 80 かなり */
-  --heat-7: #973a2e; /* 90〜 耳に注意 */
-  --heat-line: rgba(255, 255, 255, 0.55); /* マスの境目 */
+  --heat-1: #4f7a66;
+  /* 〜40 しずか */
+  --heat-2: #8db39f;
+  /* 40 おだやか */
+  --heat-3: #c9dac4;
+  /* 50 ふつう */
+  --heat-4: #e8d8a4;
+  /* 60 にぎやか */
+  --heat-5: #dca36b;
+  /* 70 うるさい */
+  --heat-6: #c4714f;
+  /* 80 かなり */
+  --heat-7: #973a2e;
+  /* 90〜 耳に注意 */
+  --heat-line: rgba(255, 255, 255, 0.55);
+  /* マスの境目 */
 }
+
 [data-theme="dark"] {
   --heat-line: rgba(20, 30, 27, 0.5);
 }
@@ -47,6 +56,7 @@
   background: var(--d-bg);
   box-shadow: var(--d-inset);
 }
+
 .scope-tabs__tab {
   min-height: 44px;
   border: 0;
@@ -56,12 +66,14 @@
   font: 700 13.5px var(--d-font);
   cursor: pointer;
 }
+
 /* 選んでいる側の背景は、スライドする .seg（app.css）が描く */
 .scope-tabs {
   --seg-pad: 6px;
   --seg-gap: 6px;
   --seg-radius: 15px;
 }
+
 .scope-tabs__tab[aria-selected="true"] {
   color: var(--d-text);
 }
@@ -74,16 +86,19 @@
   align-items: center;
   gap: 12px;
 }
+
 .map-band__label {
   flex: none;
   width: 72px;
   font-size: 13px;
   font-weight: 700;
 }
+
 .map-band__select {
   position: relative;
   flex: 1;
 }
+
 /* 右の「∨」 */
 .map-band__select::after {
   position: absolute;
@@ -97,6 +112,7 @@
   pointer-events: none;
   transform: translateY(-70%) rotate(45deg);
 }
+
 .map-band select {
   width: 100%;
   min-height: 44px;
@@ -129,7 +145,8 @@
   height: max(300px, calc(100dvh - 460px));
   border-radius: 21px;
   overflow: hidden;
-  background: var(--d-bg); /* 地図が出るまでの色 */
+  background: var(--d-bg);
+  /* 地図が出るまでの色 */
 }
 
 /* ===========================================================================
@@ -145,6 +162,7 @@
   transform: translateY(50%);
   pointer-events: none;
 }
+
 .me-pin__dot {
   position: absolute;
   inset: 0;
@@ -154,6 +172,7 @@
   border: 3px solid var(--dether-me-ring);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
+
 .me-pin__pulse {
   position: absolute;
   inset: 0;
@@ -162,12 +181,23 @@
   opacity: 0.35;
   animation: dether-me-pulse 2s ease-out infinite;
 }
+
 @keyframes dether-me-pulse {
-  from { transform: scale(1); opacity: 0.35; }
-  to { transform: scale(3); opacity: 0; }
+  from {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .me-pin__pulse { display: none; }
+  .me-pin__pulse {
+    display: none;
+  }
 }
 
 /* マスに重ねる代表タグのアイコン（map.js の createTagElement）。マスの真ん中に来るよう半分下げる */
@@ -188,11 +218,12 @@
 /* 「タグ」「バッジ」の表示切り替え（右下） */
 .map-layers {
   position: absolute;
-  right: 18px;
+  right: 70px;
   bottom: 18px;
   display: flex;
   gap: 8px;
 }
+
 .map-layers__btn {
   display: inline-flex;
   align-items: center;
@@ -207,10 +238,12 @@
   font: 700 13px var(--d-font);
   cursor: pointer;
 }
+
 .map-layers__btn svg {
   width: 16px;
   height: 16px;
 }
+
 /* 消しているとき：明るくして、線で消した印 */
 .map-layers__btn[aria-pressed="false"] {
   background: rgba(246, 239, 218, 0.95);
@@ -235,6 +268,7 @@
   color: #243b35;
   cursor: pointer;
 }
+
 .map-recenter svg {
   width: 20px;
   height: 20px;
@@ -263,20 +297,24 @@
 .heat-legend {
   padding: 14px 16px 12px;
 }
+
 .heat-legend__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
 }
+
 .heat-legend__title {
   margin: 0;
   font-size: 12.5px;
   font-weight: 700;
 }
+
 .heat-legend__unit {
   color: var(--d-muted);
   font-size: 11px;
 }
+
 .heat-legend__scale {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -285,6 +323,7 @@
   padding: 0;
   list-style: none;
 }
+
 .heat-legend__scale li {
   display: flex;
   flex-direction: column;
@@ -294,6 +333,7 @@
   line-height: 1.4;
   white-space: nowrap;
 }
+
 /* 色の帯 */
 .heat-legend__scale li::before {
   width: 100%;
@@ -303,12 +343,15 @@
   background: var(--c);
   content: "";
 }
+
 .heat-legend__scale li:first-child::before {
   border-radius: 6px 3px 3px 6px;
 }
+
 .heat-legend__scale li:last-child::before {
   border-radius: 3px 6px 6px 3px;
 }
+
 .heat-legend__scale .num {
   color: var(--d-text);
   font-size: 10px;
@@ -326,11 +369,13 @@
   font-size: 10px;
   list-style: none;
 }
+
 .heat-legend__kinds li {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
+
 .heat-legend__swatch {
   width: 12px;
   height: 12px;
@@ -338,9 +383,11 @@
   background: var(--heat-5);
   opacity: 0.72;
 }
+
 .heat-legend__swatch--est {
   opacity: 0.3;
 }
+
 .heat-legend__swatch--indoor {
   background:
     repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.6) 0 1.5px, transparent 1.5px 4px),
@@ -368,6 +415,7 @@
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
+
 [data-theme="dark"] .spot-sheet {
   background: rgba(10, 20, 17, 0.5);
 }
@@ -387,6 +435,7 @@
   overflow: hidden;
   animation: spot-sheet-up 0.28s ease-out both;
 }
+
 @keyframes spot-sheet-up {
   from {
     opacity: 0;
@@ -400,15 +449,18 @@
   gap: 8px;
   padding: 10px 12px 6px 22px;
 }
+
 .spot-sheet__title {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
 }
+
 .spot-sheet__count {
   color: var(--ink2);
   font-size: 12px;
 }
+
 .spot-sheet__close {
   display: grid;
   place-items: center;
@@ -422,6 +474,7 @@
   color: var(--ink2);
   cursor: pointer;
 }
+
 .spot-sheet__close svg {
   width: 20px;
   height: 20px;
@@ -449,15 +502,18 @@
   background: var(--d-surface);
   box-shadow: 3px 3px 10px var(--d-shadow-dark), -3px -3px 10px var(--d-shadow-light);
 }
+
 .spot-item__top {
   display: flex;
   align-items: center;
   gap: 12px;
 }
+
 .spot-item__head {
   flex: 1;
   min-width: 0;
 }
+
 .spot-item__name {
   display: flex;
   flex-wrap: wrap;
@@ -467,24 +523,29 @@
   font-size: 14px;
   font-weight: 700;
 }
+
 .spot-item__name [data-slot="chips"] {
   display: inline-flex;
   gap: 4px;
 }
+
 .chip--mine {
   border-color: var(--d-accent);
   color: var(--d-accent);
 }
+
 .spot-item__meta {
   margin: 2px 0 0;
   color: var(--ink2);
   font-size: 11px;
 }
+
 .spot-item__db {
   flex: none;
   font-size: 20px;
   font-weight: 700;
 }
+
 .spot-item__db small {
   margin-left: 2px;
   color: var(--ink2);
@@ -502,6 +563,7 @@
   padding: 0;
   list-style: none;
 }
+
 .spot-item__tags li {
   display: inline-flex;
   align-items: center;
@@ -513,6 +575,7 @@
   font-size: 12px;
   font-weight: 700;
 }
+
 .spot-item__tag-icon {
   display: grid;
   place-items: center;
@@ -529,12 +592,15 @@
   font-size: 13px;
   line-height: 1.7;
   overflow-wrap: anywhere;
-  white-space: pre-wrap; /* 改行をそのまま出す */
+  white-space: pre-wrap;
+  /* 改行をそのまま出す */
 }
+
 .spot-item__text--empty {
   color: var(--ink3);
   font-size: 12px;
 }
+
 .spot-item__photo {
   width: 100%;
   max-height: 260px;
