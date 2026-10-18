@@ -8,9 +8,8 @@
 {% endcomment %}
 User-agent: *
 
-# 管理画面・ログイン画面・JavaScript向けのURLは検索結果に載せる意味がない。
+# 管理画面・JavaScript向けのURLは検索結果に載せる意味がない。
 Disallow: /admin/
-Disallow: /auth/
 Disallow: /api/
 
 # それ以外は載せてよい。

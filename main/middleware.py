@@ -14,11 +14,9 @@ ADJECTIVES = ["静かな", "にぎやかな", "眠たい", "耳のいい", "夜�
 ANIMALS = ["フクロウ", "コウモリ", "ネコ", "キツネ", "ウサギ", "セミ", "スズメ", "タヌキ"]
 
 # ここで始まるURLではユーザーを作らない（管理画面・管理者ログイン・静的ファイル・生存確認・APIなど）
-# 管理者ログインのURLは /auth/login（config/urls.py で accounts を auth/ に割り当てている）
 # /api/ はセッションなしで来たら作らない。APIの側で401を返す
 SKIP_PREFIXES = (
     "/admin",
-    "/auth",
     "/static",
     "/media",
     "/sw.js",
