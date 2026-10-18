@@ -67,8 +67,11 @@
 
   /* ---------- 調整する数値はここだけ ---------- */
   const CONFIG = {
-    // 補正値：推定dB = dBFS + この値。⑥が端末ごとの比較から決めた値に置き換える
-    calibration: 94,
+    // 補正値：推定dB = dBFS + この値。端末の種類ごとに分ける（どれに当たるかは deviceKind()）
+    // ★PC（開発中にバッジの基準を合わせた端末）を基準にする。
+    //   iPhone 15 Pro は同じ音でPCより約20dB低く出たので、その分を足している。
+    //   Android はまだ比べていないのでPCと同じ値
+    calibration: { ios: 114, android: 94, desktop: 94 },
     // 表示・計算に使う下限と上限（スマホのマイクはこの外を正確に測れない）
     floorDb: 20,
     ceilDb: 130,
@@ -122,12 +125,12 @@
   class DetherMeter {
     /**
      * @param {Object} [opt]
-     * @param {number} [opt.calibration]  補正値（省略時は CONFIG.calibration）
+     * @param {number} [opt.calibration]  補正値（省略時は CONFIG.calibration のこの端末の値）
      * @param {Function} [opt.simulate]   マイクの代わりに dB を返す関数（PCでの開発用）
      */
     constructor(opt) {
       const o = opt || {};
-      this.calibration = o.calibration != null ? Number(o.calibration) : CONFIG.calibration;
+      this.calibration = o.calibration != null ? Number(o.calibration) : CONFIG.calibration[deviceKind()];
       this.simulate = typeof o.simulate === "function" ? o.simulate : null;
       this.ctx = null;
       this.stream = null;
@@ -693,6 +696,15 @@
       out[b] = energy(level + tilt * b + bump + noise);
     }
     return out;
+  }
+
+  /** 補正値を選ぶための端末の種類："ios" / "android" / "desktop" */
+  function deviceKind() {
+    const ua = navigator.userAgent || "";
+    // ★iPadOS のSafariは Mac と名乗るので、タッチできるかで見分ける
+    if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ios";
+    if (/Android/.test(ua)) return "android";
+    return "desktop";
   }
 
   function avg(arr) {
