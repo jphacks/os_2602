@@ -229,11 +229,14 @@ def mypage(request):
         have = sum(r["got"] for r in reqs)
         unlocked = have == len(reqs)
         key = f"l-{legend['key']}"
-        medal = {"name": legend["name"], "icon": legend["icon"], "color": "legend"}
+        # 名前は解放するまで隠す（ヒントと必要な音を手がかりに集める）。ページのソースにも出さない
+        name = legend["name"] if unlocked else "？？？"
+        medal = {"name": name, "icon": legend["icon"] if unlocked else "?", "color": "legend"}
         legend_cards.append(
             {
                 "key": key,
-                "name": legend["name"],
+                "name": name,
+                "hint": legend["hint"],
                 "icon": legend["icon"],
                 "unlocked": unlocked,
                 "have": have,
@@ -244,7 +247,7 @@ def mypage(request):
         zukan_data[key] = {
             "kind": "legend",
             "tag": medal,
-            "title": legend["name"],
+            "title": name,
             "chips": ["レジェンド"],
             "count": 1 if unlocked else 0,
             "have": have,
