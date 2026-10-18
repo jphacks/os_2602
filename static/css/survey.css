@@ -682,26 +682,6 @@
   cursor: pointer;
 }
 
-/* 「Blueskyでシェア」。投稿ボタンより控えめに、枠線だけにする */
-.badge-popup__share {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  height: 44px;
-  border: 1.5px solid var(--d-strong);
-  border-radius: 16px;
-  color: var(--d-strong);
-  font: 700 15px var(--d-font);
-  text-decoration: none;
-}
-.badge-popup__share svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
 .badge-popup__hint {
   margin: 0;
   color: var(--ink2);
@@ -840,32 +820,37 @@ legend.post-field__label {
 .tag-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 .tag-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 5px 16px 5px 5px;
+  gap: 7px;
+  min-height: 40px;
+  padding: 4px 14px 4px 4px;
   border: 0;
   border-radius: 999px;
   background: var(--d-surface);
   box-shadow: 3px 3px 8px var(--d-shadow-dark), -3px -3px 8px var(--d-shadow-light);
   color: var(--d-text);
-  font: 700 13.5px var(--d-font);
+  font: 700 13px var(--d-font);
+  white-space: nowrap;
   cursor: pointer;
+}
+.tag-chip:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
 }
 .tag-chip__icon {
   display: grid;
   flex: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--d-bg);
   box-shadow: var(--d-inset);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .tag-chip[aria-pressed="true"] {
   background: var(--d-accent-soft);
@@ -881,15 +866,63 @@ legend.post-field__label {
   color: #f1e9d2;
 }
 
+/* --- タグの「もっと見る」（index.html の小さなスクリプトが .tag-more を足す） ---
+   8個を超える分を折りたたむ。個数を変えるときは、ここの 9（= 8+1）と index.html の LIMIT を一緒に直す。
+   選んでいるタグは、折りたたんでも隠さない */
+.tag-chips[data-collapsed="true"] .tag-chip:nth-child(n + 9):not([aria-pressed="true"]) {
+  display: none;
+}
+.tag-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  margin: 12px auto 0;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--d-bg);
+  box-shadow: var(--d-inset);
+  color: var(--d-muted);
+  font: 700 12.5px var(--d-font);
+  cursor: pointer;
+}
+/* 右の「∨」。開いているときは「∧」 */
+.tag-more::after {
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  content: "";
+  transform: rotate(45deg);
+  transition: transform 0.2s ease, margin 0.2s ease;
+}
+.tag-more[aria-expanded="true"]::after {
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
+.tag-more:active {
+  box-shadow: var(--d-inset), 0 0 0 1px var(--d-edge);
+}
+.tag-more:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
+
 /* 季節タグの枠（へこんだ箱） */
 .post-season {
   margin-top: 14px;
-  padding: 12px 14px 14px;
+  padding: 12px 12px 14px;
   border-radius: 20px;
   background: var(--d-bg);
   box-shadow: var(--d-inset);
 }
 .post-season__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   margin: 0 0 10px;
   font-size: 12.5px;
   font-weight: 700;

@@ -251,14 +251,6 @@
 
     {# 投稿できるバッジ（サーバーに保存できたもの）のときだけ survey_page.js が出す #}
     <button id="badge-popup-post" class="badge-popup__primary" type="button" hidden>音の内容を投稿する</button>
-    {# 文面入りの href は survey_page.js の setShare() が開くたびに入れる。別のタブで開くので調査は一時停止のまま #}
-    <a id="badge-popup-share" class="badge-popup__share" href="https://bsky.app/" target="_blank" rel="noopener" aria-label="Blueskyでシェア（別のタブで開きます）">
-      Blueskyでシェア
-      {# 外部のサイトへ移ることを示す印 #}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
-      </svg>
-    </a>
     <p class="badge-popup__hint">右上の✕で閉じると、そのまま調査を続けます</p>
   </div>
 </div>
@@ -291,7 +283,7 @@
           <span class="post-field__aside">複数選択可</span>
         </legend>
         {% if post_tags %}
-        <div class="tag-chips">
+        <div class="tag-chips" data-collapsible>
           {% for tag in post_tags %}
           <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}" data-icon="{{ tag.medal.icon }}" data-color="{{ tag.medal.color }}">
             <span class="tag-chip__icon" aria-hidden="true">{{ tag.icon|default:tag.name|slice:":1" }}</span>{{ tag.name }}
@@ -305,7 +297,7 @@
         {% if post_seasonal %}
         <div class="post-season">
           <p class="post-season__label">季節タグ<span>{{ post_seasonal_note }}</span></p>
-          <div class="tag-chips">
+          <div class="tag-chips" data-collapsible>
             {% for tag in post_seasonal %}
             <button class="tag-chip" type="button" aria-pressed="false" data-tag-id="{{ tag.id }}" data-icon="{{ tag.medal.icon }}" data-color="{{ tag.medal.color }}">
               <span class="tag-chip__icon" aria-hidden="true">{{ tag.icon|default:tag.name|slice:":1" }}</span>{{ tag.name }}
@@ -352,4 +344,37 @@
 {% block scripts %}
 <script src="{% static 'js/measure.js' %}"></script>
 <script src="{% static 'js/survey_page.js' %}"></script>
+<script>
+  // タグが増えたときのために、8個を超えたら「もっと見る」で折りたたむ（個数は survey.css の nth-child(n+9) と同じ）。
+  // 選んでいるタグは折りたたんでも隠さない。
+  (function () {
+    var LIMIT = 8;
+    document.querySelectorAll(".tag-chips[data-collapsible]").forEach(function (box) {
+      var chips = box.querySelectorAll(".tag-chip");
+      if (chips.length <= LIMIT) return;
+      var more = document.createElement("button");
+      more.type = "button";
+      more.className = "tag-more";
+      more.setAttribute("aria-expanded", "false");
+      box.setAttribute("data-collapsed", "true");
+      function render() {
+        var open = box.getAttribute("data-collapsed") !== "true";
+        more.setAttribute("aria-expanded", String(open));
+        var hidden = box.querySelectorAll(".tag-chip:nth-child(n+" + (LIMIT + 1) + '):not([aria-pressed="true"])').length;
+        more.textContent = open ? "閉じる" : "もっと見る（" + hidden + "）";
+        more.hidden = !open && hidden === 0;
+      }
+      more.addEventListener("click", function () {
+        box.setAttribute("data-collapsed", box.getAttribute("data-collapsed") === "true" ? "false" : "true");
+        render();
+      });
+      // 選んだ・外したときに残りの個数を数え直す
+      box.addEventListener("click", function (e) {
+        if (e.target.closest(".tag-chip")) setTimeout(render, 0);
+      });
+      box.insertAdjacentElement("afterend", more);
+      render();
+    });
+  })();
+</script>
 {% endblock %}
