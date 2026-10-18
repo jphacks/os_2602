@@ -6,7 +6,8 @@
     あなたの記録（見えないアカウントなので名前は出さない）
     3つの数字（集めたバッジの個数・音の図鑑・調査回数）
     dBバッジ（5種類 × 時間帯の枠を全部並べる。すべて／時間帯で絞り込む）
-    音の図鑑（共通タグも季節タグも混ぜて番号順。まだ出会っていないものは「？？？」とヒント）
+    レジェンド（決められたタグを全部集めると解放される金色のバッジ。main/legend_data.py）
+    音の図鑑（共通タグも季節タグも混ぜて番号順。8個ずつのページを横にめくる。まだのものは「？？？」とヒント）
     図鑑のシート（カードを押すと開く。説明と、これまでの標本＝音の模様入りのバッジが並ぶ）
 
   バッジの見た目はリーダーの部品（templates/components/badge.html と static/js/badge.js）。
@@ -94,40 +95,97 @@
     <p id="badge-empty" class="mypage-empty" hidden>この時間帯のバッジはありません</p>
   </section>
 
-  {# ===== 音の図鑑 ===== #}
+  {# ===== レジェンド（決められたタグを全部集めると解放。中身は main/legend_data.py） ===== #}
+  {% if legend_cards %}
+  <section class="d-card mypage-section">
+    <div class="mypage-section__head">
+      <h2 class="mypage-section__title">レジェンド</h2>
+      <span class="mypage-section__note">決められた音を全部集めると解放</span>
+    </div>
+    <ul class="legends">
+      {% for card in legend_cards %}
+      <li>
+        <button class="legend{% if card.unlocked %} legend--unlocked{% endif %}" type="button" data-key="{{ card.key }}">
+          {% if card.unlocked %}
+          <span class="medal medal--tag m-tag-legend medal--list" role="img" aria-label="{{ card.name }}のメダル">{{ card.icon }}</span>
+          {% else %}
+          <span class="medal medal--tag m-lock medal--list" role="img" aria-label="まだ解放していないレジェンド">?</span>
+          {% endif %}
+          <span class="legend__body">
+            <span class="legend__name">{{ card.name }}</span>
+            {# 必要なタグ。集めたものは色つき、まだのものは「?」 #}
+            <span class="legend__reqs" aria-label="{{ card.need }}個中{{ card.have }}個集めた">
+              {% for req in card.reqs %}
+              {% if req.got %}
+              <span class="medal medal--tag m-tag-{{ req.tag.color }} medal--xxs" aria-hidden="true">{{ req.tag.icon }}</span>
+              {% else %}
+              <span class="medal medal--tag m-lock medal--xxs" aria-hidden="true">?</span>
+              {% endif %}
+              {% endfor %}
+            </span>
+          </span>
+          <span class="legend__progress num">{% if card.unlocked %}解放！{% else %}{{ card.have }}/{{ card.need }}{% endif %}</span>
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {# ===== 音の図鑑（8個ずつのページ。横にスワイプか ‹ › でめくる。mypage.js） ===== #}
   <section class="d-card mypage-section">
     <div class="mypage-section__head">
       <h2 class="mypage-section__title">音の図鑑</h2>
       <span class="mypage-section__note">投稿でタグを選ぶと登録</span>
     </div>
-    <ul class="zukan">
-      {% for card in tag_cards %}
-      <li>
-        <button class="zukan__item{% if card.collected %} zukan__item--collected{% endif %}" type="button" data-key="{{ card.key }}">
-          <span class="zukan__no num">No.{{ card.number|stringformat:"03d" }}</span>
-          {# タグのメダル（色は管理画面の「メダルの色」）。音の模様は mypage.js が描き足す #}
-          <span class="zukan__medal" data-medal="{{ card.key }}">
-            {% if card.collected %}
-            <span class="medal medal--tag m-tag-{{ card.color }} medal--md" role="img" aria-label="{{ card.tag.name }}のメダル">{{ card.icon }}</span>
-            {% else %}
-            <span class="medal medal--tag m-lock medal--md" role="img" aria-label="まだ出会っていない音">?</span>
-            {% endif %}
-          </span>
-          <span class="zukan__text">
-            <span class="zukan__name">{% if card.collected %}{{ card.tag.name }}{% else %}？？？{% endif %}</span>
-            <span class="zukan__period">
-              {% if card.tag.is_rare %}<span class="chip chip--rare">レア！</span>{% endif %}
-              {% if card.collected %}{{ card.tag.period_label }}{% else %}{{ card.tag.hint_text }}{% endif %}
+    {% if tag_pages %}
+    <div id="zukan-pages" class="zukan-pages" tabindex="0" aria-label="音の図鑑のページ。左右にスワイプでめくる">
+      {% for page in tag_pages %}
+      <ul class="zukan zukan-page" aria-label="{{ forloop.counter }}ページ目">
+        {% for card in page %}
+        <li>
+          <button class="zukan__item{% if card.collected %} zukan__item--collected{% endif %}" type="button" data-key="{{ card.key }}">
+            <span class="zukan__no num">No.{{ card.number|stringformat:"03d" }}</span>
+            {# タグのメダル（色は管理画面の「メダルの色」）。音の模様は mypage.js が描き足す #}
+            <span class="zukan__medal" data-medal="{{ card.key }}">
+              {% if card.collected %}
+              <span class="medal medal--tag m-tag-{{ card.color }} medal--md" role="img" aria-label="{{ card.tag.name }}のメダル">{{ card.icon }}</span>
+              {% else %}
+              <span class="medal medal--tag m-lock medal--md" role="img" aria-label="まだ出会っていない音">?</span>
+              {% endif %}
             </span>
-          </span>
-          {% if card.count %}<span class="zukan__count num" aria-label="{{ card.count }}回出会った">×{{ card.count }}</span>{% endif %}
-          {% if card.now %}<span class="zukan__now">今だけ</span>{% endif %}
-        </button>
-      </li>
-      {% empty %}
-      <li class="mypage-empty">タグはまだ登録されていません</li>
+            <span class="zukan__text">
+              <span class="zukan__name">{% if card.collected %}{{ card.tag.name }}{% else %}？？？{% endif %}</span>
+              <span class="zukan__period">
+                {% if card.tag.is_rare %}<span class="chip chip--rare">レア！</span>{% endif %}
+                {% if card.collected %}{{ card.tag.period_label }}{% else %}{{ card.tag.hint_text }}{% endif %}
+              </span>
+            </span>
+            {% if card.count %}<span class="zukan__count num" aria-label="{{ card.count }}回出会った">×{{ card.count }}</span>{% endif %}
+            {% if card.now %}<span class="zukan__now">今だけ</span>{% endif %}
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
       {% endfor %}
-    </ul>
+    </div>
+    {% if tag_pages|length > 1 %}
+    <div class="zukan-pager">
+      <button id="zukan-prev" class="zukan-pager__btn" type="button" aria-label="前のページ" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+      </button>
+      <span class="zukan-pager__dots" aria-hidden="true">
+        {% for page in tag_pages %}<span class="zukan-pager__dot{% if forloop.first %} is-current{% endif %}"></span>{% endfor %}
+      </span>
+      <span id="zukan-page-no" class="zukan-pager__no num" aria-live="polite">1 / {{ tag_pages|length }}</span>
+      <button id="zukan-next" class="zukan-pager__btn" type="button" aria-label="次のページ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+      </button>
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="mypage-empty">タグはまだ登録されていません</p>
+    {% endif %}
   </section>
 </div>
 
@@ -154,7 +212,7 @@
       </div>
       <p id="zukan-sheet-text" class="zukan-sheet__text"></p>
 
-      <h3 class="zukan-sheet__subtitle">集めた標本<small>押すと、上のバッジにその音の模様が出ます</small></h3>
+      <h3 id="zukan-sheet-subtitle" class="zukan-sheet__subtitle">集めた標本<small>押すと、上のバッジにその音の模様が出ます</small></h3>
       <ul id="zukan-sheet-items" class="specimens"></ul>
       <p id="zukan-sheet-empty" class="mypage-empty" hidden>まだありません。調査して出会いに行こう</p>
     </div>

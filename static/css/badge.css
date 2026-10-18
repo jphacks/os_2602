@@ -117,6 +117,15 @@
 .m-tag-sakura   { --rim: #D99AA5; --face: #FAEEEE; --ln: #D99AA5; --txt: #7D3E4A; }
 .m-tag-sumi     { --rim: #3D3F3B; --face: #E9E5DA; --ln: #3D3F3B; --txt: #2B2C29; }
 
+/* レジェンドバッジ（決められたタグを全部集めると解放。main/legend_data.py）：金色の縁と、ほのかな光 */
+.m-tag-legend   { --rim: #C9A23F; --face: #FBF3DC; --ln: #B08A2E; --txt: #6B4A0E; }
+.m-tag-legend::before {
+  background: conic-gradient(from 210deg, #f2d77e, #b8862b, #f7e7a6, #a87a22, #e9c766, #f2d77e);
+}
+.m-tag-legend {
+  filter: drop-shadow(0 0 6px rgba(233, 199, 102, 0.55)) drop-shadow(0 2px 2.5px rgba(36, 59, 53, 0.32));
+}
+
 /* ---------- 静・深：明朝体（シャープな字体） ---------- */
 .m-q40, .m-q35, .medal--kanji {
   font-family: 'Noto Serif JP', 'Noto Serif CJK JP', 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'BIZ UDPMincho', serif;

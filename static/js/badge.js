@@ -27,7 +27,8 @@
   const RARE  = { q40d: true, q35d: true, b90n: true };        // 昼の静寂・昼の深い静寂・夜の90dB
   const BAND  = { d: "昼", n: "夜" };
   // タグのメダルの色の組（badge.css の .m-tag-○○。main/models.py の Tag.MedalColor と同じ）
-  const TAG_COLORS = ["sage", "moss", "ai", "shu", "yamabuki", "fuji", "sakura", "sumi"];
+  // legend はレジェンドバッジ（決められたタグを全部集めると解放。main/legend_data.py）の金色
+  const TAG_COLORS = ["sage", "moss", "ai", "shu", "yamabuki", "fuji", "sakura", "sumi", "legend"];
   const SIZES = ["popup", "list", "pin", "md", "sm", "xs", "xxs"];
 
   function check(code) {
