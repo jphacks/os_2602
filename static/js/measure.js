@@ -744,7 +744,7 @@
   /** send: null のときの、サーバーの返事のまね */
   function localResponse(res) {
     const h = res.endedAt.getHours();
-    const day = h >= 6 && h < 22;
+    const day = h >= 6 && h < 18;
     const code = judgeLocally(res);
     return {
       measurement: {

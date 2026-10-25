@@ -51,17 +51,17 @@ class TimeBand(models.Model):
 
     @property
     def wraps(self):
-        """夜（22:00〜翌6:00）のように日付をまたぐか"""
+        """夜（18:00〜翌6:00）のように日付をまたぐか"""
         return self.start_time > self.end_time
 
     @property
     def code(self):
         """画面のバッジ部品（badge.js）が使う "d"（昼）/ "n"（夜）。日付をまたぐ時間帯を夜とみなす
-        measure_store.get_time_band の code と同じ値になる（昼 6:00〜22:00 / 夜 22:00〜6:00）"""
+        measure_store.get_time_band の code と同じ値になる（昼 6:00〜18:00 / 夜 18:00〜6:00）"""
         return "n" if self.wraps else "d"
 
     def contains(self, t):
-        """時刻 t がこの時間帯に入るか。夜（22:00〜翌6:00）のような日またぎにも対応"""
+        """時刻 t がこの時間帯に入るか。夜（18:00〜翌6:00）のような日またぎにも対応"""
         if self.start_time <= self.end_time:
             return self.start_time <= t < self.end_time
         return t >= self.start_time or t < self.end_time

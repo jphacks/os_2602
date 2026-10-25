@@ -8,7 +8,7 @@
 #
 # ▼ DBにデータが無いとき
 #
-#   ・TimeBand が無い・どれにも入らない時刻 … 昼6〜22時 / 夜の直書きで返す。バッジは保存しない
+#   ・TimeBand が無い・どれにも入らない時刻 … 昼6〜18時 / 夜の直書きで返す。バッジは保存しない
 #   ・BadgeType が1件も無い … 企画書の値で判定だけして返す。バッジは保存しない
 #   どちらも管理画面から登録すれば保存されるようになる（⑥）
 # =============================================================================
@@ -72,8 +72,8 @@ def get_time_band(measured_at: datetime) -> TimeBandInfo:
     band = TimeBand.for_datetime(measured_at)
     if band is not None:
         return TimeBandInfo(id=band.id, name=band.name, code=band.code)
-    # DBに時間帯が無い間の仮（保存はされない）。TimeBand.code と同じ決まり（昼 6:00〜22:00）
-    if 6 <= timezone.localtime(measured_at).hour < 22:
+    # DBに時間帯が無い間の仮（保存はされない）。TimeBand.code と同じ決まり（昼 6:00〜18:00）
+    if 6 <= timezone.localtime(measured_at).hour < 18:
         return TimeBandInfo(id=None, name="昼", code="d")
     return TimeBandInfo(id=None, name="夜", code="n")
 
