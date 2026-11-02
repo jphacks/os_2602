@@ -9,7 +9,7 @@ requires-python = ">=3.13"
 dependencies = [
     # ★5.2 はLTS(長期サポート版)。
     #   最新版より解説記事が多く、ハッカソン中に調べ物をするときに困らない。
-    "Django==5.2.17",
+    "Django>=5.2.18,<5.3",
     "mysqlclient",      # PythonとMySQLの通訳(Django公式が推奨するもの)
     "python-dotenv",    # .env から設定を読み込む
     "gunicorn",         # 本番用のサーバー(開発中は使わない)
