@@ -1,6 +1,8 @@
-# [dether（ディーザー）](https://dether.mrrn.jp/)
+# [dether（ディーザー）](https://dether.mrrn.jp/)※現在は公開していません
 
 ![README_header](static/images/ogp.png)
+
+### 🎉JPHacks2026 HackDay Sponsor Award 受賞！！（ソフトバンク株式会社 様）
 
 ## 各種リンク
 
